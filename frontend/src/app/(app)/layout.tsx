@@ -1,5 +1,10 @@
 import { AuthGate } from "@/state/auth-gate";
+import { AppShell } from "@/components/shell/app-shell";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
-  return <AuthGate>{children}</AuthGate>;
+  return (
+    <AuthGate>
+      <AppShell>{children}</AppShell>
+    </AuthGate>
+  );
 }

@@ -205,3 +205,104 @@ in-flight promise regardless of which code path triggers it. This fixes same-tab
 double-firing (Strict Mode, or any other double-mount); it does not cover two separate
 browser tabs refreshing at the same moment, which is a harder problem — a cross-tab lock —
 and is out of scope for Phase 3.
+
+## 2026-08-25/26 — Phase 4
+
+**D-15. The visual brief's 9-file correction chain was consolidated before Phase 4, per
+the roadmap's own instruction (Appendix B: "belongs before Phase 4, not inside it").**
+`docs/reference/tessera-design-brief-merged.md` is the result — a base document
+(`tessera-v2-FINAL (3).md`) plus eight deltas applied in verified order, each topic
+resolved to its final, cumulative state with inline provenance notes wherever a value was
+revised more than once (the QR button alone, three times). A decoy file in the same
+uploads folder, `tessera-design-brief.md`, explicitly claims to be "the single source of
+truth" and is not — it still shows the Iter button as glass-only with no gradient, which
+the verified chain's `corrections-2 §4` restores; it and two other non-chain files were
+deliberately excluded. Phase 4 and everything after it is built against the merged file,
+not any individual original.
+
+**D-16. The header has no language switcher — the PRD wins where it conflicts with the
+visual brief.** PRD §12 L-7 is explicit and gives a reason: *"It does not appear in the
+application header — language is a setting, not a toolbar control."* The merged design
+brief (§8quater, §11ter) places the HY·EN·RU pill in the header anyway, and the brief's
+own attempt to reconcile the two produced a garbled, self-contradicting sentence — which
+is what surfaced the conflict rather than letting either paraphrase stand unchecked. Asked
+directly, the decision was to follow the PRD: `AppHeader` carries the logo, the Web/Mobile
+switch, and the account block, and nothing else. The language control exists only on the
+login screen and in Settings, per the brief's own compact-pill spec (`LanguagePill`,
+§11ter final per `corrections-2 §3`): always the Latin codes **HY · EN · RU**, never
+transliterated per the active locale — Phase 3 had this wrong, rendering "ՀԱՅ"/"EN"/"РУС".
+
+**D-17. The token layer draws from three sources, not two, and `--bg-raised` is computed,
+not looked up.** `tessera-design-system.dc.html` remains the source for `--ink`/`--hair`/
+`--glass`/`--panel`/`--surface2`/`--danger`/`--ok` (two states, keyed by `[data-tt]`
+theme lightness); `tessera-data.js` remains the source for the fixed grade scale and the
+seven accents. The merged brief (§4) adds a third source: `--bg-base` (four states, keyed
+by `[data-bg]` — Խորը/Ածխային/Սերուցք/Մոխրագույն) and the two gradient-mesh palettes,
+Palette Deep and Palette Aura, which are keyed to theme lightness and independent of which
+of the four backgrounds is active. The brief gives `--bg-raised` as an explicit formula —
+"lightening 4% on dark backgrounds, darkening 3% on light ones" — so it's computed with
+`color-mix()` from `--bg-base` in `tessera.css`, not a fourth hardcoded hex pulled from the
+live prototype's own `BGS` array (which predates this correction and would have baked in a
+stale value).
+
+A real bug followed directly from getting this coupling wrong at first: `ThemeProvider`
+defaults to `"system"` (resolved from the OS) and `BackgroundProvider` defaulted to a
+hardcoded `"deep"`, independently of each other. In a browser whose OS preference is
+light, that produced `data-tt="light"` next to `data-bg="deep"` — light ink on a near-black
+background, i.e. the entire login screen rendering with invisible text. Caught by actually
+opening the page rather than by any check script. Fixed by making the background's
+*default* (not a user's explicit later choice, which stays sticky once made) track the
+resolved theme reactively — `deep` while dark, `cream` while light — rather than a
+hardcoded value that can disagree with "system" on first load.
+
+**D-18. Several real gaps and one real bug were found in the design source's own copy and
+in Phase 3's placeholder dictionary, once the real trilingual dictionary (`tessera-data.js`
+`T`, 304 keys) replaced Phase 3's stand-in.** All fixed, not just noted:
+
+- `auth.recSub`/`sentBody`/`newSub`/`firstBody` were unresolved `{{ t.auth.* }}` template
+  placeholders in the **Armenian** source specifically — hy is supposed to be the source
+  language (L-1), but these four were apparently never actually written, while en/ru have
+  real copy for the same keys. Replaced with natural Armenian text matching the register of
+  the surrounding real strings.
+- The design never anticipated an admin demo account, or copy for account lockout, rate
+  limiting, an invalid reset link, or a resend countdown. `auth.demoA`/`errLocked`/
+  `errRateLimited`/`errGeneric`/`resetInvalid`/`resendWait`/`resendButton` were added,
+  matching the surrounding keys' tone, in all three locale files.
+- `bg` (the four background names) is real design copy, but from a separate constant
+  (`BG_T` in `Tessera.dc.html`) that isn't part of the `T` export the rest of the
+  dictionary mirrors — copied in verbatim rather than re-invented.
+- Phase 3's own auth screens used invented key names (`identifierLabel`, `loginButton`,
+  `newPasswordLabel`, …) that don't exist anywhere in the real dictionary, because it was
+  written before the real dictionary was available. Every screen was reconciled to the
+  real names (`idLabel`, `submit`, `newPw`, …) — `set.sessRevoke` in particular doesn't
+  exist; the real key is `sessOut`.
+- `SessionList`'s "last active" row called `interpolate(t.set.lastSeen, {when: ...})`
+  against a string with no `{when}` token at all — the real dictionary has no
+  placeholder-substitution convention anywhere (every screen concatenates translated
+  fragments directly, preserving each language's own word order); the call was a silent
+  no-op that dropped the actual timestamp from the UI. Fixed to concatenate directly.
+
+**D-19. Sidebar and mobile-pill navigation item composition is a documented placeholder,
+not a finalized spec.** The roadmap says nav items come from `T.nav` "filtered by role"
+without stating which; the merged brief's §9 nav-pill mechanics are exact down to the
+pixel but never states which four items fill the pill for which role; and the audit
+checklist's aside that "the teacher's fourth nav slot is Այսօր (Today), not a credential"
+names a screen with no icon, no route, and no entry in the `T` export at all (it lives, if
+anywhere, in a `TODAY_T` constant this build never located). Rather than invent that
+screen's content now, `components/shell/nav-items.ts` ships a reasonable, explicitly
+commented placeholder set (student: overview/subjects/archive/settings; teacher:
+gradebook/analytics/queue/settings, substituting the credentials icon for queue, which has
+none; admin: queue/settings) to be revisited once Phases 6–12 build the screens it points
+at. The QR/plus docked button is never a nav item — it's the pill's own centre button.
+
+**D-20. `npm run tokens:check`'s exemption is the whole `frontend/src/design/` directory,
+not the single file the roadmap describes.** The roadmap's "one file, `tessera.css`,
+excluded" assumed no other file would ever need to contain a literal color. In practice
+several JS-side consumers need typed constants generated from the same design source (an
+accent picker's swatch list, the fixed grade legend, the accent-tint fallback, the four
+backgrounds' hex for a picker button) — all genuinely canonical, not hardcoded, so the
+whole directory is exempt rather than growing a per-file list. `globals.css`'s
+create-next-app scaffold defaults (`--background`/`--foreground`) were left as a documented,
+intentionally-failing exception through most of this phase's build, per the plan to close
+it once `ThemeProvider`/`BackgroundProvider` existed — that cutover happened by the end of
+this phase, so `tokens:check` now passes with no exceptions at all.

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiJson } from "@/lib/api/client";
-import { useLocale, interpolate } from "@/i18n/locale-provider";
+import { useLocale } from "@/i18n/locale-provider";
 
 type Session = { id: string; deviceLabel: string; lastSeenAt: string; createdAt: string; current: boolean };
 
@@ -49,29 +49,34 @@ export function SessionList() {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{t.set.sessTitle}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        {t.set.sessTitle}
+      </h2>
       <ul className="space-y-2">
         {sessions.map((s) => (
-          <li key={s.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+          <li key={s.id} className="flex items-center justify-between rounded-lg border border-hair px-3 py-2">
             <div>
-              <p className="text-sm font-medium">
-                {s.deviceLabel} {s.current && <span className="text-gray-400">({t.set.sessThis})</span>}
+              <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                {s.deviceLabel} {s.current && <span style={{ color: "var(--ink-3)" }}>({t.set.sessThis})</span>}
               </p>
-              <p className="font-mono text-xs text-gray-400">{interpolate(t.set.lastSeen, { when: s.lastSeenAt })}</p>
+              <p className="font-mono text-xs" style={{ color: "var(--ink-3)" }}>
+                {t.set.lastSeen}: {s.lastSeenAt}
+              </p>
             </div>
             {!s.current && (
-              <button
-                onClick={() => revoke(s.id)}
-                disabled={busyId === s.id}
-                className="text-xs text-red-600 disabled:opacity-50"
-              >
-                {t.set.sessRevoke}
+              <button onClick={() => revoke(s.id)} disabled={busyId === s.id} className="text-xs text-danger disabled:opacity-50">
+                {t.set.sessOut}
               </button>
             )}
           </li>
         ))}
       </ul>
-      <button onClick={revokeAllOthers} disabled={busyId === "*"} className="text-xs underline disabled:opacity-50">
+      <button
+        onClick={revokeAllOthers}
+        disabled={busyId === "*"}
+        className="text-xs underline disabled:opacity-50"
+        style={{ color: "var(--ink-2)" }}
+      >
         {t.set.sessAll}
       </button>
     </section>

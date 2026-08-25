@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./auth-provider";
+import { Mark } from "@/components/brand/mark";
 
 // booting -> splash; anon -> /login; authed && mustChangePassword -> /first-login
 // and nothing else, including on back-navigation (roadmap Phase 3 AuthGate spec).
@@ -20,8 +21,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (status === "booting") {
     return (
-      <main className="flex h-screen items-center justify-center">
-        <p className="font-mono text-sm text-gray-500">Tessera</p>
+      <main className="flex h-screen items-center justify-center bg-base">
+        <Mark size={48} />
       </main>
     );
   }

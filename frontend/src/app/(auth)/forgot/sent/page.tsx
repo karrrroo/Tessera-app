@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLocale, interpolate } from "@/i18n/locale-provider";
 import { apiFetch } from "@/lib/api/client";
+import { GradientMesh } from "@/components/design/gradient-mesh";
+import { Glass } from "@/components/design/glass";
 
 const COOLDOWN_SECONDS = 60;
 
@@ -34,32 +36,40 @@ export default function ForgotSentPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="w-full max-w-sm space-y-4 text-center">
-        <h1 className="text-xl font-semibold">{t.auth.sentTitle}</h1>
-        <p className="text-sm text-gray-500">{t.auth.sentBody}</p>
+    <main className="relative flex min-h-screen items-center justify-center bg-base p-8">
+      <GradientMesh />
+      <Glass radius={34} className="relative z-10 w-full max-w-sm space-y-4 p-8 text-center">
+        <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
+          {t.auth.sentTitle}
+        </h1>
+        <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+          {t.auth.sentBody}
+        </p>
 
         <button
           onClick={resend}
           disabled={secondsLeft > 0}
-          className="w-full rounded-full border border-gray-300 px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+          className="w-full rounded-full border border-hair px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+          style={{ color: "var(--ink-2)" }}
         >
           {secondsLeft > 0 ? interpolate(t.auth.resendWait, { seconds: secondsLeft }) : t.auth.resendButton}
         </button>
 
         {devLink && (
-          <p className="text-xs text-gray-400">
-            {t.auth.devLinkLabel}:{" "}
+          <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+            {/* Dev-only convenience (NODE_ENV !== "production"), never shown to
+                real users — deliberately not localized. */}
+            Dev: reset link{" "}
             <Link href={devLink} className="underline">
               {devLink}
             </Link>
           </p>
         )}
 
-        <Link href="/login" className="block text-sm text-gray-500 underline">
-          {t.auth.recBack}
+        <Link href="/login" className="block text-sm underline" style={{ color: "var(--ink-3)" }}>
+          {t.auth.back}
         </Link>
-      </div>
+      </Glass>
     </main>
   );
 }

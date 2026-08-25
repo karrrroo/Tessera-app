@@ -14,7 +14,7 @@ export function PasswordChecklist({ password }: { password: string }) {
   return (
     <ul className="space-y-1 text-xs">
       {rules.map((r) => (
-        <li key={r.key} className={r.pass ? "text-green-600" : "text-gray-400"}>
+        <li key={r.key} style={{ color: r.pass ? "var(--ok)" : "var(--ink-3)" }}>
           {r.pass ? "✓" : "○"} {t.auth[r.key]}
         </li>
       ))}

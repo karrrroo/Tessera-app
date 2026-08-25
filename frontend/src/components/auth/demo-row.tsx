@@ -45,14 +45,17 @@ export function DemoRow({ onError }: { onError: (message: string) => void }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs uppercase tracking-wide text-gray-400">{t.auth.demoLabel}</p>
+      <p className="text-xs uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        {t.auth.demoLabel}
+      </p>
       <div className="flex flex-wrap gap-2">
         {accounts.map((a) => (
           <button
             key={a.email}
             disabled={busy}
             onClick={() => loginAs(a)}
-            className="rounded-full border border-gray-300 px-3 py-1.5 text-xs disabled:opacity-50"
+            className="rounded-full border border-hair px-3 py-1.5 text-xs disabled:opacity-50"
+            style={{ color: "var(--ink-2)" }}
           >
             {labelFor(a)}
           </button>

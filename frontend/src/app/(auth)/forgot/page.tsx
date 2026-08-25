@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/i18n/locale-provider";
 import { apiFetch } from "@/lib/api/client";
+import { GradientMesh } from "@/components/design/gradient-mesh";
+import { Glass } from "@/components/design/glass";
 
 export default function ForgotPasswordPage() {
   const { t } = useLocale();
@@ -30,32 +32,42 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-semibold">{t.auth.recTitle}</h1>
-        <p className="text-sm text-gray-500">{t.auth.recSub}</p>
-        <label className="block space-y-1">
-          <span className="text-sm text-gray-600">{t.auth.identifierLabel}</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
-          />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-full bg-black px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {t.auth.recButton}
-        </button>
-        <Link href="/login" className="block text-center text-sm text-gray-500 underline">
-          {t.auth.recBack}
+    <main className="relative flex min-h-screen items-center justify-center bg-base p-8">
+      <GradientMesh />
+      <Glass radius={34} className="relative z-10 w-full max-w-sm space-y-4 p-8">
+        <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
+          {t.auth.recTitle}
+        </h1>
+        <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+          {t.auth.recSub}
+        </p>
+        <form onSubmit={submit} className="space-y-4">
+          <label className="block space-y-1">
+            <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+              {t.auth.email}
+            </span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-[18px] border border-hair bg-glass px-3 py-2 text-sm text-ink outline-none focus:border-hair-bright"
+            />
+          </label>
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-full px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+          >
+            {t.auth.send}
+          </button>
+        </form>
+        <Link href="/login" className="block text-center text-sm underline" style={{ color: "var(--ink-3)" }}>
+          {t.auth.back}
         </Link>
-      </form>
+      </Glass>
     </main>
   );
 }

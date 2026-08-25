@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { apiJson, refreshOnce } from "../lib/api/client";
 import { registerAuthFailureHandler, setAccessToken } from "../lib/api/token-store";
+import { useLocale } from "../i18n/locale-provider";
 
 export type UserProfile = {
   id: string;
@@ -36,6 +37,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("booting");
   const [user, setUser] = useState<UserProfile | null>(null);
+  const { syncLocaleFromServer } = useLocale();
+
+  // locale is the one preference that lives on the account, not the device
+  // (roadmap Phase 4) — once a profile loads, it overrides whatever the
+  // browser's own localStorage had (e.g. a shared school computer left on
+  // the previous student's language).
+  useEffect(() => {
+    if (user) syncLocaleFromServer(user.locale);
+  }, [user, syncLocaleFromServer]);
 
   const clearAuth = useCallback(() => {
     setAccessToken(null);

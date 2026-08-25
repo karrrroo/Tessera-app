@@ -1,0 +1,191 @@
+/*
+ * Tessera design tokens — the contract (roadmap Phase 4: "the token file is the
+ * contract"). Every color anywhere in frontend/src must resolve through one of
+ * these custom properties; `npm run tokens:check` greps for stray hex literals
+ * outside this file (design/accents.ts and design/grade-colors.ts are exempt —
+ * they are the canonical JS-side source, not a violation).
+ *
+ * Sourced from three places:
+ *   - `tessera-design-system.dc.html` [data-tt="dark"|"light"] blocks: ink,
+ *     hair, glass, panel, danger, ok — two states, keyed by theme lightness.
+ *   - `tessera-data.js`: the fixed grade scale (G) and the accent list
+ *     (ACCENTS) — see design/grade-colors.ts and design/accents.ts.
+ *   - `docs/reference/tessera-design-brief-merged.md` (the consolidated
+ *     9-file design brief, §4): --bg-base/--bg-raised (the four named
+ *     backgrounds, §11ter) and the two gradient-mesh palettes, Deep and
+ *     Aura (§4.2/§4.3) — keyed to theme lightness, independent of which of
+ *     the four backgrounds is chosen. --bg-raised is an explicit formula in
+ *     that source ("lightening 4% on dark backgrounds, darkening 3% on
+ *     light ones"), not a fixed per-background lookup — computed here with
+ *     color-mix() rather than hardcoded, so it always tracks --bg-base.
+ */
+
+:root {
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+  --t-quick: 200ms;
+  --t-theme: 600ms;
+  --t-press: 120ms;
+
+  /* --accent-tint never resolves to pure black/white (brief §8) — this is
+     black's own fallback tint (steel), not a derived value. AccentProvider
+     overrides --accent/--accent-fg/--accent-tint inline for any non-black
+     accent; the per-theme black inversion below is the default. */
+  --accent-tint: #5A6472;
+
+  /* Text on a solid --danger fill (OfflineBanner) — white works against
+     both themes' --danger shade, so it isn't itself theme-scoped. */
+  --danger-fg: #ffffff;
+
+  /* The docked QR button's inverse-bloom fill (brief §9, final per
+     corrections-4 §3.1) — a one-off spec'd gradient for this exact button,
+     not a general-purpose token, but centralized here rather than inlined
+     so tokens:check still catches accidental ad-hoc colors elsewhere. */
+  --qr-bloom-1: #25D3C4;
+  --qr-bloom-2: #0B3FC9;
+  --qr-bloom-3: #062A8A;
+}
+
+/* Theme (light/dark) — ink, hairlines, glass, status colors, the default
+   (black) accent's mandatory inversion, and the gradient-mesh palette.
+   ThemeProvider writes data-tt="dark"|"light" on the frame element and
+   follows prefers-color-scheme when the user's choice is "system". */
+[data-tt="dark"] {
+  --ink: #F4F2EE;
+  --ink-2: rgba(244, 242, 238, .72);
+  --ink-3: rgba(244, 242, 238, .48);
+  --hair: rgba(255, 255, 255, .11);
+  --hair-bright: rgba(255, 255, 255, .18);
+  --hair-top: rgba(255, 255, 255, .28);
+  --glass: rgba(255, 255, 255, .10);
+  --glass-solid: rgba(255, 255, 255, .10);
+  --panel: #0D1017;
+  --surface2: #141822;
+  --danger: #c9634f;
+  --ok: #5f8a6e;
+
+  /* Black accent inverts on dark surfaces (brief §8) — black is invisible
+     on --bg-base here, so black-as-accent becomes near-white instead. */
+  --accent: #F1EFE9;
+  --accent-fg: #101112;
+
+  /* Palette Deep (brief §4.2) — the gradient-mesh identity on dark surfaces. */
+  --mesh-1: #0B3FC9;
+  --mesh-2: #1E8FE0;
+  --mesh-3: #25D3C4;
+  --mesh-4: #6B45E0;
+  /* Brief §5.1: "40-55% opacity for Deep" — midpoint. */
+  --mesh-opacity: 0.48;
+}
+
+[data-tt="light"] {
+  --ink: #101112;
+  --ink-2: rgba(16, 17, 18, .72);
+  --ink-3: rgba(16, 17, 18, .5);
+  --hair: rgba(0, 0, 0, .09);
+  --hair-bright: rgba(0, 0, 0, .13);
+  --hair-top: rgba(255, 255, 255, .9);
+  --glass: rgba(255, 255, 255, .72);
+  --glass-solid: #FFFFFF;
+  --panel: #FFFFFF;
+  --surface2: #F2F2F4;
+  --danger: #8a4a3e;
+  --ok: #3d6b4d;
+
+  --accent: #101112;
+  --accent-fg: #F4F3F1;
+
+  /* Palette Aura (brief §4.3) — the gradient-mesh identity on light surfaces. */
+  --mesh-1: #F7F7F9;
+  --mesh-2: #3A6BF0;
+  --mesh-3: #8FC4FA;
+  --mesh-4: #B9A9F5;
+  /* Brief §5.1: "22-30% opacity for Aura" — midpoint. */
+  --mesh-opacity: 0.26;
+}
+
+/* Background (brief §11ter: Խորը/Ածխային/Սերուցք/Մոխրագույն — deep/coal/cream/
+   grey) — bg-base only; bg-raised is always derived from it, never hardcoded.
+   BackgroundProvider writes data-bg on the frame element and, per the brief's
+   explicit rule, always sets a matching data-tt alongside it — deep/coal are
+   dark, cream/grey are light — so a light background is never paired with
+   dark ink. */
+[data-bg="deep"] {
+  --bg-base: #05070D;
+  --bg-raised: color-mix(in srgb, #05070D 96%, white 4%);
+}
+
+[data-bg="coal"] {
+  --bg-base: #101114;
+  --bg-raised: color-mix(in srgb, #101114 96%, white 4%);
+}
+
+[data-bg="cream"] {
+  --bg-base: #F4F2EE;
+  --bg-raised: color-mix(in srgb, #F4F2EE 97%, black 3%);
+}
+
+[data-bg="grey"] {
+  --bg-base: #E8E8EC;
+  --bg-raised: color-mix(in srgb, #E8E8EC 97%, black 3%);
+}
+
+/* Grade scale (REC-2, brief §2.1) — fixed. Never varies with theme,
+   background, accent, or opacity. Grades 4 and 8 are a documented WCAG AA
+   exception against both inks (docs/decisions.md D-5) — shipped as designed. */
+:root {
+  --g1: #6d1414;
+  --g2: #8a2318;
+  --g3: #a63c1c;
+  --g4: #bd6320;
+  --g5: #c78d1d;
+  --g6: #8f9440;
+  --g7: #5f8a6e;
+  --g8: #3f7f8c;
+  --g9: #2c5f8f;
+  --g10: #1d3f79;
+}
+
+/* Layered glass, layer 2+3 (brief §5.3) — the frosted panel + its top-edge
+   highlight. Callers provide layer 1 (a solid object or the gradient mesh)
+   behind/around it; this class is deliberately not full-bleed-only so a
+   caller can let it partially overlap that layer 1, per the technique. */
+.glass-panel {
+  background: var(--glass);
+  border: 1px solid var(--hair-bright);
+  box-shadow: inset 0 1px 0 var(--hair-top);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-panel {
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel {
+    background: var(--glass-solid);
+  }
+}
+
+/* Login card (brief §8bis): glass over the mesh below 900px; at 900px+ the
+   right column is flat --bg-raised with no glass and no gradient at all —
+   Tailwind utilities can't out-specificity .glass-panel's own properties, so
+   this un-sets them explicitly instead of trying to override each one. */
+@media (min-width: 900px) {
+  .login-card {
+    background: var(--bg-raised);
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* The 600ms theme/background/accent cross-fade (roadmap Phase 4 Done-when
+   #12) — applied to the frame element, disabled under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-tt] {
+    transition: background-color var(--t-theme) var(--ease-out), color var(--t-theme) var(--ease-out);
+  }
+}

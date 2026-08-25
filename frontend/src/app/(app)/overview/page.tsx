@@ -1,19 +1,22 @@
 "use client";
 
 import { useAuth } from "@/state/auth-provider";
+import { useT } from "@/i18n/locale-provider";
 
 export default function OverviewPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const t = useT();
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Overview</h1>
-      <p className="text-sm text-gray-500">
+      <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+        {t.nav.overview}
+      </h1>
+      <p className="text-sm" style={{ color: "var(--ink-2)" }}>
         Signed in as {user?.firstName} {user?.lastName} ({user?.role})
       </p>
-      <p className="text-xs text-gray-400">Real shell arrives in Phase 4 — this is a placeholder.</p>
-      <button onClick={() => logout()} className="rounded-full bg-black px-4 py-2 text-sm text-white">
-        Log out
-      </button>
+      <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+        The mosaic and real content arrive in Phase 7 — this is a gating placeholder.
+      </p>
     </main>
   );
 }

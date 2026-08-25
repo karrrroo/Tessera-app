@@ -214,3 +214,10 @@ export async function setLockedUntil(userId: string, lockedUntil: Date | null) {
 export async function setLastLoginAt(userId: string) {
   await db.update(user).set({ lastLoginAt: new Date().toISOString() }).where(eq(user.id, userId));
 }
+
+// The one preference that lives on the account rather than the device
+// (roadmap Phase 4, PATCH /api/me/preferences) — theme/accent/background/
+// iterPosition are localStorage-only on the client and never reach here.
+export async function setLocale(userId: string, locale: "hy" | "en" | "ru") {
+  await db.update(user).set({ locale }).where(eq(user.id, userId));
+}
