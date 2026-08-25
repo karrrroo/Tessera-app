@@ -61,3 +61,29 @@ Tailwind (frontend), PostgreSQL accessed only through the backend (no Neon API, 
 Supabase, no BaaS), JWT auth, and an npm-workspaces root with a single `npm start`. All
 of this matches the requested stack exactly; no changes were needed to align the source
 documents with it.
+
+## 2026-08-25 — Phase 1
+
+**D-7. Local Postgres runs as a user-owned process, not the Windows service.**
+PostgreSQL 17 was installed via `winget` (D-3's local-database decision), but the silent
+install left the `postgresql-x64-17` Windows service with an unknown superuser password
+and no way to reset it without administrator rights, which this environment doesn't have.
+Rather than require elevation, a second, independent PostgreSQL cluster was initialized
+with `initdb` under the current user's own permissions, living at `Tessera-app/.pgdata/`
+(gitignored) and listening on **port 5433**, not 5432 — the Windows-service instance on
+5432 is simply unused. This cluster is not a service — it has to be started once per
+machine session with `npm run db:start` (wrapped automatically into `npm start`'s
+`prestart` hook) and can be stopped with `npm run db:stop`. `backend/.env`'s
+`DATABASE_URL` points at port 5433 accordingly. This has no bearing on the eventual Neon
+cutover (D-3) — Neon is a managed service and none of this local process-management detail
+applies to it.
+
+**D-8. Two factual corrections to the roadmap's Phase 1 text**, found while implementing
+it, annotated in place in `docs/reference/tessera-roadmap.md`: the schema actually has
+**22** tables, not the 24 the roadmap's prose claims (verified by querying
+`information_schema.tables` directly — `schema-check.mjs` asserts 22); and `drizzle-kit
+pull` does not support an introspection config with no `out` path as the roadmap assumes —
+it always writes `schema.ts`/`relations.ts` and a migration-journal snapshot into `out`
+together. Worked around by pointing `out` at a gitignored `backend/.drizzle-introspect/`
+scratch directory and copying just `schema.ts`/`relations.ts` into `backend/src/db/` after
+each pull — `out` is never fed to a migrate step regardless.

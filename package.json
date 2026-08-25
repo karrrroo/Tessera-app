@@ -7,12 +7,16 @@
     "frontend"
   ],
   "scripts": {
-    "prestart": "node scripts/guard-no-migrations.mjs",
+    "db:start": "node scripts/db-start.mjs",
+    "db:stop": "node scripts/db-stop.mjs",
+    "schema:check": "node scripts/schema-check.mjs",
+    "prestart": "node scripts/guard-no-migrations.mjs && npm run db:start",
     "start": "concurrently -n backend,frontend -c blue,green \"npm run start -w backend\" \"npm run start -w frontend\"",
-    "predev": "node scripts/guard-no-migrations.mjs",
+    "predev": "node scripts/guard-no-migrations.mjs && npm run db:start",
     "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\""
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "pg": "^8.13.1"
   }
 }

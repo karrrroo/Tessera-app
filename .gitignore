@@ -11,6 +11,13 @@ backend/build/
 # local storage adapter (D-4) — uploaded files never get committed
 backend/storage/
 
+# local Postgres cluster (D-7) — data files, never committed
+.pgdata/
+.pgdata-log.txt
+
+# drizzle-kit pull's own introspection scratch space — never migrated from
+backend/.drizzle-introspect/
+
 # logs
 *.log
 npm-debug.log*

@@ -391,6 +391,13 @@ record of what changed.
 `drizzle.config.ts` contains `introspect` configuration and **nothing else** — no
 `out` migrations folder, no `schema` output for generation.
 
+> **Build note.** In practice, `drizzle-kit pull` requires an `out` path and always
+> writes `schema.ts`/`relations.ts` plus a migration-journal snapshot there together —
+> there's no config that produces schema output with no `out` at all. Resolved by pointing
+> `out` at a gitignored `backend/.drizzle-introspect/` scratch directory and copying just
+> `schema.ts`/`relations.ts` into `backend/src/db/` after each pull; that scratch directory
+> is never fed to a migrate step. See `docs/decisions.md` D-8.
+
 **Step 2 — relations.** `src/db/relations.ts` is hand-written and *is* editable. It
 declares the joins PRD §10 implies: `student → user`, `enrollment → student, class`,
 `teaching_assignment → teacher, class, subject`, `mark → assessment, student`,
@@ -400,7 +407,8 @@ gradebook reads single round trips instead of six.
 **Step 3 — verify.** `npm run schema:check` (`scripts/schema-check.ts`) reads
 `information_schema` and `pg_indexes` and asserts, printing a line per item:
 
-- All 24 tables from PRD §10.1–PRD §10.4 exist.
+- All tables from PRD §10.1–PRD §10.4 exist (**22**, not the 24 stated here — verified
+  directly against `information_schema.tables`; see `docs/decisions.md` D-8).
 - Every enum has exactly the PRD §10 values, in order — `role`, `locale`, `enrollment.status`,
   `assessment.kind`, `mark.state`, `import_batch.kind`, `import_batch.status`,
   `import_row.status`, `export_log.format`, `credential_request.status`,
