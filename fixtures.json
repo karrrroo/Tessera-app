@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-08-25T07:53:02.842Z",
+  "demo": {
+    "student": {
+      "email": "ani@demo.tessera.am",
+      "userId": "8ad28f06-bd79-4a44-a3e1-e492341e5c50",
+      "studentId": "7c892db3-2d3c-4b82-acd3-e98b08a412c6"
+    },
+    "teacher": {
+      "email": "sargsyan@demo.tessera.am",
+      "userId": "67ac21b3-7f8c-4fd2-b7cc-f4296ebc29c4",
+      "teacherId": "f1b88c7e-0f89-40dc-85e6-562ace4ad101"
+    },
+    "admin": {
+      "email": "direktor@demo.tessera.am",
+      "userId": "ec32d496-8f8a-4f00-bd82-72aa5f584000"
+    },
+    "firstLogin": {
+      "email": "nor@demo.tessera.am",
+      "userId": "f634172a-ee91-4cd5-83b1-c623991c3fd9"
+    }
+  },
+  "draftOwner": {
+    "teacherId": "73f5e4f4-5449-4dcd-bb8c-0a6a8f04a84f",
+    "classId": "a4436790-79ac-4e29-b21c-07d2cd33bca8",
+    "subjectId": "c2ca62a7-58c5-44b4-b0e6-928b62ce7e68",
+    "count": 12
+  },
+  "supersededMarks": [
+    "4a70a923-3baa-4b75-878e-6ae845de076f",
+    "66ecefd1-6dca-4088-a3c9-37dcfe27da6e",
+    "59417ee1-5a5a-4a65-bebe-af4086d19695"
+  ],
+  "sparseStudent": {
+    "studentId": "0c813970-3a7f-4dc8-9aca-199fbf819b21",
+    "publishedMarks": 5
+  },
+  "heavyClassSubjectTerm": {
+    "classId": "a4436790-79ac-4e29-b21c-07d2cd33bca8",
+    "subjectId": "c2ca62a7-58c5-44b4-b0e6-928b62ce7e68",
+    "termId": "4a1eb143-6dbb-458f-bef2-e8de7c3bd8e9",
+    "students": 25,
+    "assessments": 8
+  },
+  "untaggedAssessment": "fbf2aaf9-05c1-4288-b2ba-60106c374ee5",
+  "credentials": {
+    "pending": "c5e157cc-1a2c-4841-84b0-bbf76507f59d",
+    "approved": "5338a0de-7b44-48a0-ae97-555a8520ad22",
+    "declined": "3afce359-cde9-4d29-9214-7f013b59950d"
+  }
+}

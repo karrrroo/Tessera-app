@@ -87,3 +87,46 @@ it always writes `schema.ts`/`relations.ts` and a migration-journal snapshot int
 together. Worked around by pointing `out` at a gitignored `backend/.drizzle-introspect/`
 scratch directory and copying just `schema.ts`/`relations.ts` into `backend/src/db/` after
 each pull — `out` is never fed to a migrate step regardless.
+
+## 2026-08-25 — Phase 2
+
+**D-9. Phase 2's fixture table, corrected against the real seed data.** Four of the
+roadmap's stated fixture thresholds/details didn't survive contact with the actual
+`tessera-seed.sql`, all annotated in place in `docs/reference/tessera-roadmap.md`:
+
+- **Demo-account password format.** The roadmap's Phase 2 says each demo account should
+  have "a parseable Argon2id hash (`$argon2id$`)". In fact every seeded account, demo
+  included, is bcrypt (`$2a$12$…`) — exactly as `tessera-PRD.md` §11.5.2 itself documents
+  (seed data is bcrypt, with a migrate-on-login upgrade path to Argon2id for real logins).
+  `scripts/data-audit.mjs` accepts either format.
+- **Sparse-student threshold.** The roadmap wants "fewer than 3 published marks"; the seed
+  gives its one deliberately-sparse student exactly 5, and every other student has 120+.
+  Fixed by finding the minimum and asserting it's a clear outlier (under a quarter of the
+  next-lowest) rather than checking a fixed number that no student actually satisfies.
+- **Heavy class-subject-term threshold.** The roadmap wants "≥20 assessments"; the real
+  maximum for any single class-subject-term is 8 (15 across both terms combined for the
+  same class-subject). Fixed by asserting ≥5 assessments and ≥25 students instead — high
+  enough to mean something, low enough to actually exist.
+- **`data:topup` being "INSERT-only."** The two real gaps found (below) can only be fixed
+  by updating an existing row — inserting a second enrollment for a student already
+  enrolled that year would violate `enrollment`'s own unique constraint, and the
+  assessments needing a topic already exist. `scripts/data-topup.mjs` uses idempotent,
+  narrowly-scoped `UPDATE`s instead, each a no-op once the fixture it targets exists.
+
+**D-10. Two real, accepted gaps in the seed data — deferred, not fixed.**
+`scripts/data-audit.mjs` found two fixtures the seed genuinely doesn't provide, reported
+them in `data-gaps.md`, and stopped rather than deciding unilaterally, per the roadmap's
+own instruction. Asked directly, the decision was to **defer both, not run
+`data:topup`**:
+
+- No enrollment has any status other than `active` — there is no departed student to
+  exercise Phase 5's "departed never deletes historical marks" test against.
+- No assessment has a non-null `topic` — `tessera-seed.sql` never populates that column at
+  all. This is the same fact as PRD §18 Q8 ("is curriculum topic data available?"), just
+  surfacing here as a concrete data gap instead of an abstract open question.
+
+Consequence: `npm run data:audit` exits 1 and will keep doing so until one of these is
+revisited — that's the script working as designed, not a broken build. `fixtures.json` is
+committed without a `departedStudent` or `taggedAssessment` key. Phase 5's roster-departure
+test and Phase 7's topic-breakdown test are untestable against seed data until this is
+revisited; both phases must re-check `data-gaps.md` before relying on either fixture.

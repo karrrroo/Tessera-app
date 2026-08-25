@@ -505,11 +505,26 @@ matters, because a phase's "Done when" is unrunnable if the data it names does n
 | ≥1 teacher with ≥12 marks in `state = 'draft'` | Phases 7, 8 | exists |
 | ≥3 marks in `state = 'superseded'` with a non-null `reason` and a successor pointing at them | Phase 7 REC-8 | exists |
 | ≥1 student with fewer than 3 published marks | Phase 7 REC-9 empty states | exists |
-| ≥1 enrollment with status `departed` whose student still has published marks | Phase 5 ADM-7 | exists |
-| ≥1 class–subject–term with ≥20 assessments and ≥25 students | Phases 8, 9 | exists |
-| ≥1 assessment with a non-null `topic`, and ≥1 with `topic` null | Phase 7 REC-10 degradation | both exist |
+| ≥1 enrollment with status `departed` whose student still has published marks | Phase 5 ADM-7 | **absent** — see below |
+| ≥1 class–subject–term with ≥20 assessments and ≥25 students | Phases 8, 9 | real max is 8 in one term (15 across both) — see below |
+| ≥1 assessment with a non-null `topic`, and ≥1 with `topic` null | Phase 7 REC-10 degradation | only the null half exists — see below |
 | credential requests in all three statuses, ≥1 `declined` with a reason | Phase 10 | exists |
 | ≥1 `qr_credential` per student | Phase 6 | count matches student count |
+
+> **Build note.** Four corrections to this table and the fixtures below, found while
+> running `scripts/data-audit.mjs` against the real seed — full detail in
+> `docs/decisions.md` D-9/D-10:
+> 1. Demo-account hashes are bcrypt (`$2a$12$…`), not Argon2id — matches
+>    `tessera-PRD.md` §11.5.2, not this document.
+> 2. The sparse student has 5 published marks, not "fewer than 3" — the audit finds the
+>    minimum and checks it's a clear outlier instead.
+> 3. No class-subject-term combo reaches 20 assessments; the real maximum is 8. The audit
+>    uses ≥5 assessments and ≥25 students instead.
+> 4. **The departed-student and tagged-assessment fixtures don't exist in the seed at
+>    all** — not a threshold problem, a real gap. Reported in `data-gaps.md`; the decision
+>    was to defer both rather than run `data:topup`. `fixtures.json` has no
+>    `departedStudent` or `taggedAssessment` key. Phases 5 and 7 must re-check
+>    `data-gaps.md` before relying on either.
 
 For each satisfied fixture it writes the identifiers to `fixtures.json`:
 
