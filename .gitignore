@@ -1,0 +1,22 @@
+node_modules/
+.env
+.env.local
+*.local
+
+# build outputs
+frontend/.next/
+backend/dist/
+backend/build/
+
+# local storage adapter (D-4) — uploaded files never get committed
+backend/storage/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor/OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
