@@ -130,3 +130,78 @@ revisited — that's the script working as designed, not a broken build. `fixtur
 committed without a `departedStudent` or `taggedAssessment` key. Phase 5's roster-departure
 test and Phase 7's topic-breakdown test are untestable against seed data until this is
 revisited; both phases must re-check `data-gaps.md` before relying on either fixture.
+
+## 2026-08-25 — Phase 3
+
+**D-11. Password-reset tokens are stateless, not stored anywhere.** The schema has no
+table or column for reset tokens at all — a real gap under C2, surfaced and asked about
+explicitly rather than silently worked around. Decided design: a token is
+`base64url(userId + "." + issuedAtEpochSeconds + "." + mac)`, where `mac` is an
+HMAC-SHA256 (keyed by a new `RESET_SECRET` env var) over the payload *and* the user's
+current `password_hash`, truncated to 32 chars. Verifying recomputes that MAC against
+whatever `password_hash` is live right now. No table, no in-memory map, no schema change,
+and the token survives a server restart because there's nothing to lose — everything
+needed to verify it lives in the token itself plus one already-existing column.
+
+Single-use falls out for free: a successful reset changes `password_hash`, so every
+outstanding token for that user — this one and any other still-live one — stops verifying
+against the new hash on its own. Accepted trade-off, stated up front: two reset requests
+within the same 30 minutes are both live until either is used, not just the most recent
+one (the PRD's literal "issuing a second invalidates the first" isn't quite what happens,
+but the practical security property — a stale reset link can't outlive a password change —
+holds). `RESET_SECRET` is a new required env var (`backend/src/lib/env.ts`), generated the
+same way as `JWT_ACCESS_SECRET`.
+
+**D-12. Refresh-token rotation inserts a new `device_session` row and revokes the old
+one, rather than updating a single row in place.** This was necessary to make reuse
+detection (roadmap Phase 3: "a token whose hash matches no live row is a reuse of a
+rotated token... revoke the entire family") actually implementable: with an in-place
+update, the old hash is gone the moment it's rotated, so a replayed old token is
+indistinguishable from a typo — there'd be nothing left to detect reuse *of*. Inserting a
+new row and marking the old one `revoked_at` instead means the old hash is still a real,
+queryable row, so "presented hash matches something, but it's already revoked" becomes a
+meaningful signal, with zero schema change (device_session already allows multiple rows
+per user).
+
+That signal still isn't enough by itself, though — a session revoked because the user
+explicitly signed it out from another device looks identical, in the table, to one
+revoked because it was rotated away. Conflating the two was an actual bug caught while
+testing this phase by hand: revoking one device from Settings was, before the fix, also
+silently logging out every *other* device for that user, since both cases fell into the
+same "matches a revoked row → assume theft → nuke everything" branch. Fixed with a small
+in-memory map (`rotation-tracker.ts`) recording exactly which hashes were rotated away, and
+only *those* trigger the full-family revocation and `AUTH_REFRESH_REUSED`; a hash that
+matches a revoked row for any other reason returns a plain `AUTH_SESSION_REVOKED`, with no
+effect on the user's other sessions. Losing this map on restart just means a replayed
+rotated token gets treated as an ordinary dead session instead of triggering the
+aggressive response — the safe direction, unlike D-11's reset tokens.
+
+**D-13. Seed data touched by manual testing was reset.** Phase 3 was verified end to end
+by hand against the real login/refresh/reset/lockout/session endpoints (see
+`docs/phases/03-authentication.md`), which necessarily mutated real rows (a demo
+account's password after a reset-flow test, a teacher's `locked_until` after a lockout
+test, several extra `device_session` rows). `tessera-seed.sql` was re-applied afterward
+(it's designed to be safe to re-run — truncate and refill) to leave the database in the
+same state Phase 2's audit already verified, rather than committing Phase 3 against
+quietly-drifted data.
+
+**D-14. The frontend's boot-time silent refresh had to be routed through the same
+in-flight-request guard as the 401-triggered refresh, not its own direct `fetch` call.**
+Found while driving the frontend in a real browser (a check `tsc`/`eslint` can't perform):
+escaping a first-login account to `/overview` via a full page navigation would sometimes
+land back on `/login`, fully logged out, instead of bouncing to `/first-login` as
+intended. Cause: `AuthProvider`'s boot effect called `/api/auth/refresh` directly, and a
+full navigation remounts it — under React Strict Mode (on by default in Next.js dev) a
+mount effect always runs, cleans up, and re-runs once, so the direct call fired twice with
+the same refresh cookie in near-simultaneous requests. The first request legitimately
+rotates the token; the second, still carrying the now-superseded cookie value, matches
+D-12's "hash was rotated away" case exactly — which is the correct signal for genuine
+token theft, just tripped here by the client racing itself. The result was the entire
+session family being revoked on an ordinary page load. Fixed by exporting the
+`refreshOnce()` promise-deduping helper already living in `lib/api/client.ts` (built for
+concurrent 401-triggered refreshes) and having `AuthProvider`'s boot effect call that
+instead of `fetch` directly, so every refresh in the app funnels through one shared
+in-flight promise regardless of which code path triggers it. This fixes same-tab
+double-firing (Strict Mode, or any other double-mount); it does not cover two separate
+browser tabs refreshing at the same moment, which is a harder problem — a cross-tab lock —
+and is out of scope for Phase 3.

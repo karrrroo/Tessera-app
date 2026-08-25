@@ -1,51 +1,51 @@
 {
-  "generatedAt": "2026-08-25T07:53:02.842Z",
+  "generatedAt": "2026-08-25T10:36:25.867Z",
   "demo": {
     "student": {
       "email": "ani@demo.tessera.am",
-      "userId": "8ad28f06-bd79-4a44-a3e1-e492341e5c50",
-      "studentId": "7c892db3-2d3c-4b82-acd3-e98b08a412c6"
+      "userId": "cb9fd740-56e8-453a-9aa4-9f758c711fa0",
+      "studentId": "05880e59-d828-47f7-b61d-cec935a47bf7"
     },
     "teacher": {
       "email": "sargsyan@demo.tessera.am",
-      "userId": "67ac21b3-7f8c-4fd2-b7cc-f4296ebc29c4",
-      "teacherId": "f1b88c7e-0f89-40dc-85e6-562ace4ad101"
+      "userId": "fd337d80-7a19-4845-b680-f46fcecbe10c",
+      "teacherId": "61a92fbc-75cf-421b-adb4-0160925d0801"
     },
     "admin": {
       "email": "direktor@demo.tessera.am",
-      "userId": "ec32d496-8f8a-4f00-bd82-72aa5f584000"
+      "userId": "ea82f546-5dd9-4655-ab01-20092ad421fe"
     },
     "firstLogin": {
       "email": "nor@demo.tessera.am",
-      "userId": "f634172a-ee91-4cd5-83b1-c623991c3fd9"
+      "userId": "8c6aa977-ff39-4a07-b7e0-d50692996642"
     }
   },
   "draftOwner": {
-    "teacherId": "73f5e4f4-5449-4dcd-bb8c-0a6a8f04a84f",
-    "classId": "a4436790-79ac-4e29-b21c-07d2cd33bca8",
-    "subjectId": "c2ca62a7-58c5-44b4-b0e6-928b62ce7e68",
+    "teacherId": "93791d63-7448-48c4-9567-dabecc959cc8",
+    "classId": "134768cd-53b8-455c-8e6b-1a53010a44c2",
+    "subjectId": "ee5b1eba-44bd-47d4-bb14-e88ea954c7a9",
     "count": 12
   },
   "supersededMarks": [
-    "4a70a923-3baa-4b75-878e-6ae845de076f",
-    "66ecefd1-6dca-4088-a3c9-37dcfe27da6e",
-    "59417ee1-5a5a-4a65-bebe-af4086d19695"
+    "1aabff4a-6ced-4b24-bf23-43941e2b9bb0",
+    "45940d12-f6e8-451c-9fa7-4e8e3d279d6b",
+    "e4ad2833-8f72-4dab-bcec-e7c39461932e"
   ],
   "sparseStudent": {
-    "studentId": "0c813970-3a7f-4dc8-9aca-199fbf819b21",
+    "studentId": "e94eb957-7c3a-455b-9b6b-358acef36c38",
     "publishedMarks": 5
   },
   "heavyClassSubjectTerm": {
-    "classId": "a4436790-79ac-4e29-b21c-07d2cd33bca8",
-    "subjectId": "c2ca62a7-58c5-44b4-b0e6-928b62ce7e68",
-    "termId": "4a1eb143-6dbb-458f-bef2-e8de7c3bd8e9",
+    "classId": "134768cd-53b8-455c-8e6b-1a53010a44c2",
+    "subjectId": "ee5b1eba-44bd-47d4-bb14-e88ea954c7a9",
+    "termId": "02b8c5b5-f2af-455f-b506-131c627ed499",
     "students": 25,
     "assessments": 8
   },
-  "untaggedAssessment": "fbf2aaf9-05c1-4288-b2ba-60106c374ee5",
+  "untaggedAssessment": "ca11106f-bc74-41e7-b39b-a9aeff294d4c",
   "credentials": {
-    "pending": "c5e157cc-1a2c-4841-84b0-bbf76507f59d",
-    "approved": "5338a0de-7b44-48a0-ae97-555a8520ad22",
-    "declined": "3afce359-cde9-4d29-9214-7f013b59950d"
+    "pending": "13f8e2a7-1da4-42c1-8619-de8ba1b6ad48",
+    "approved": "1bea1c76-7fd6-4aff-922e-50c862df8e44",
+    "declined": "f929d2ee-91d3-4d5e-885f-cda852c1db55"
   }
 }

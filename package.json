@@ -20,5 +20,8 @@
   "devDependencies": {
     "concurrently": "^9.1.0",
     "pg": "^8.13.1"
+  },
+  "allowScripts": {
+    "argon2@0.45.1": true
   }
 }

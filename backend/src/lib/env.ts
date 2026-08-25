@@ -13,6 +13,12 @@ const schema = z.object({
   DATABASE_URL: z
     .string({ required_error: "DATABASE_URL is required (see .env.example)" })
     .regex(/^postgres(ql)?:\/\//, "DATABASE_URL must be a postgres:// connection string"),
+  JWT_ACCESS_SECRET: z
+    .string({ required_error: "JWT_ACCESS_SECRET is required (see .env.example)" })
+    .min(32, "JWT_ACCESS_SECRET must be at least 32 characters"),
+  RESET_SECRET: z
+    .string({ required_error: "RESET_SECRET is required (see .env.example)" })
+    .min(32, "RESET_SECRET must be at least 32 characters"),
 });
 
 function loadEnv() {
