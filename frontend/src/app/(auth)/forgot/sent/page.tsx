@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLocale, interpolate } from "@/i18n/locale-provider";
@@ -10,7 +10,19 @@ import { Glass } from "@/components/design/glass";
 
 const COOLDOWN_SECONDS = 60;
 
+// useSearchParams() forces a client-only bail-out during static prerendering
+// and Next.js requires a Suspense boundary around it (build-only error,
+// invisible under `next dev` — found while building Phase 6, unrelated to
+// it, and fixed here rather than left for whoever hits the next `next build`).
 export default function ForgotSentPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotSentContent />
+    </Suspense>
+  );
+}
+
+function ForgotSentContent() {
   const { t } = useLocale();
   const email = useSearchParams().get("email") ?? "";
   const [secondsLeft, setSecondsLeft] = useState(COOLDOWN_SECONDS);

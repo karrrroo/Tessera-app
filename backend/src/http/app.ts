@@ -4,6 +4,7 @@ import { z } from "zod";
 import { pool } from "../db/client.js";
 import { authRouter } from "../modules/auth/routes.js";
 import { adminRouter } from "../modules/admin/routes.js";
+import { identityRouter } from "../modules/identity/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
 import { asyncHandler } from "./async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "./errors.js";
@@ -44,6 +45,10 @@ export function createApp() {
 
   app.use("/api/auth", authRouter);
   app.use("/api/admin", adminRouter);
+  // /api/me/credential, /api/me/today, /api/verify, /api/verify/anomalies
+  // (roadmap Phase 6) — mounted at /api, not /api/me, since it also owns
+  // the /api/verify* paths.
+  app.use("/api", identityRouter);
 
   app.get(
     "/api/me",

@@ -8,6 +8,7 @@ import { BackgroundProvider } from "@/state/background-provider";
 import { AccentProvider } from "@/state/accent-provider";
 import { OnlineProvider } from "@/state/online-provider";
 import { LayoutModeProvider } from "@/state/layout-mode-provider";
+import { IdShellPrecache } from "@/components/id/id-shell-precache";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <IdShellPrecache />
         <ThemeProvider>
           <BackgroundProvider>
             <AccentProvider>

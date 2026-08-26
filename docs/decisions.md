@@ -382,3 +382,113 @@ coincidentally sharing a `startsOn` — not a defect in a school's real data, wh
 create that ambiguity, but worth knowing about if a support request ever looks like "my
 import can't find any of my classes" and the school has more than one year on the same
 start date.
+
+## 2026-08-26 — Phase 6
+
+**D-28. The Tessera ID (C14) hex-slicing algorithm isn't in the current PRD — it's only in
+the archived v1 roadmap.** `tessera-PRD.md` §11.5.4 restates the *rule* ("derived
+deterministically from `student.id`, format `TSR-AM-####-####`, no relation to
+`emis_student_id`") but not the exact derivation. `docs/reference/archive/tessera-roadmap-v1-superseded.md`
+has it: `TSR-AM-<first 4 hex of md5(student.id)>-<next 4 hex>`. Used verbatim
+(`modules/identity/crypto.ts`), uppercased, since the roadmap's own worked example
+(`TSR-AM-4471-0288`) is otherwise unverifiable against anything current.
+
+**D-29. `scan_event.qr_credential_id` is `not null`, so two of the five `/api/verify`
+results can't always be persisted.** A payload whose handle doesn't resolve to any live
+credential — the true `unknown` case, and the sliver of `signature_invalid` where the
+*handle* half (not just the mac) was corrupted — has no row to log against, and C2 forbids
+relaxing the constraint. Resolved the same way D-22 resolved enrollment's unique
+constraint: verified against the raw schema first, then scoped the guarantee to what's
+actually checkable. ID-9's stated purpose is catching **credential misuse** — a real,
+resolvable card replayed, revoked, or shared — and every one of those cases *does* resolve
+to a credential and *does* get logged; only content-free noise (a non-Tessera QR code
+scanned by mistake, or a handle mangled beyond recognition) is answered to the caller but
+not persisted, and there is nothing meaningful to log a pattern about in that case. Also
+scoped: `SCAN_PAYLOAD_MALFORMED` (wrong shape entirely — no dot, wrong length, non-base32
+characters) is a request-validation error with no candidate handle at all, so "every call
+writes a scan_event" is read as "every call that produced a real verify attempt," not
+literally every HTTP request.
+
+**D-30. `qr_credential` rows are created lazily, on first `GET /api/me/credential`, not
+wired into Phase 5's student-creation paths.** All 200 seeded students already have one
+(verified directly against the database), but a mid-year add or bulk import — both written
+before this module existed — doesn't. `getOrCreateQrCredential` (identity/repo.ts) inserts
+one with a fresh random seed and registers its handle in the in-memory map immediately, so
+a brand-new student's card works on first open without Phase 5's admin service ever needing
+to know this module exists.
+
+**D-31. The teacher variant of `GET /api/me/credential` carries no `payload`/`credentialId`
+at all, and `GET /api/me/today` has no time-of-day, room, or "current lesson" highlight.**
+`qr_credential.student_id` is student-only by schema — there is no teacher-credential concept
+to speak of, matching the roadmap's own silence on a teacher QR sheet and the design
+prototype's `isT` special case (clicking the QR button as a teacher opens a gradebook column
+instead, a design-tool artifact, not a spec). Separately, `assessment` has a date
+(`held_on`) but no period or start time, and no table has a room column at all — inventing
+either would be exactly the "lesson table" the roadmap explicitly forbids (PRD §3.2). The
+`today.now`/`today.drafts`/`TODAY_T.room`/`.date` design copy that would need those fields
+is left out of the i18n dictionaries rather than added and never truthfully usable; the
+draft-count line specifically depends on the gradebook's draft state, which doesn't exist
+until Phase 7. Subject names on both endpoints are sent as the full `nameHy`/`nameEn`/`nameRu`
+triple, not a single server-picked string — the roadmap's own JSON example shows a single
+`"subjectName"`, but C8 ("no translation logic in the backend") is the harder rule, and every
+other module in this codebase already sends the full triple and lets the frontend pick.
+
+**D-32. `qs` and `today` are real design copy the Phase 4 i18n extraction missed, not new
+copy.** They come from `QRSHEET` and `TODAY_T`/`LESSON_T.title` in `Tessera.dc.html` —
+separate top-level constants, never part of the `T.scr.*` object Phase 4's extraction
+walked, so they were invisible to it. Added by hand to all three locale files (a bounded,
+verified transcription of ~8 short strings, not a full re-extraction), with the omission
+documented in each file's own header comment per that file's existing convention.
+
+**D-33. Two deliberate departures from the literal design source, both about what a QR
+code and its card are allowed to look like.** First: the design's own `qrRows` builder
+(`Tessera.dc.html`) colors every dark module `var(--ink)` — correct-looking in light theme,
+but in dark theme `--ink` is light, which would paint light modules on the QR's white card
+and defeat the code's own readability (the exact failure ID-6's corner-rounding is trying
+not to cause). Fixed tokens instead: `--qr-ink`/`--qr-card-bg` (tessera.css), never
+theme-scoped, alongside the equally-fixed `--id-card-*` tokens for the ID card's own
+gradient and text (ID-2's "dark in both themes" already established that this card doesn't
+follow the app's theme at all). Second: `IdCard` uses `Grain` only, not `GradientMesh`'s
+radial blobs, even though the roadmap's own Components list says "GradientMesh + Grain" —
+the design source's actual ID-card render (`Tessera.dc.html`) layers one noise overlay on
+the accent-tint gradient and nothing else; four colorful mesh blobs on top would visibly
+fight the "steel/near-black" result the same roadmap text describes in the same breath.
+Followed the literal source over the shorthand list.
+
+**D-34. A real bug chain found while verifying ID-8 (offline), not by inspection but by
+actually hard-reloading `/id` in airplane mode and watching it fail.** `AuthProvider`'s
+boot-time `refreshOnce()` treated a network-level fetch failure (offline) identically to an
+explicit 401 (a genuinely dead session) — both collapsed to `setStatus("anon")`, which
+`AuthGate` sends straight to `/login`, discarding everything IndexedDB had already cached.
+Fixed by making `refreshOnce()` return `boolean | null` (`null` = the server was never
+reached at all) and adding a distinct `"offline"` auth status, trusted only on a device with
+a real recent session (a non-sensitive `tessera.hasAuthedBefore` localStorage marker, set on
+login/refresh, cleared on logout) — a device that's never authenticated has nothing cached
+to show offline anyway. The same distinction was applied to `apiFetch`'s mid-session 401
+retry path, so a token expiring during a brief network blip doesn't *also* read as a logout.
+Fixing that alone still didn't work: `AppShell`'s `if (!user) return null` blocked every
+route's content, not just the nav it actually needs `user.role` for, since the new
+`"offline"` status has no live profile by design. Changed to render bare content without
+chrome in that case — a real offline nav is Phase 13's job, not this one's. Found in the
+same pass, unrelated to any of the above: `next build` failed outright on
+`/(auth)/forgot/sent` (`useSearchParams()` requires a Suspense boundary, a build-only error
+invisible under `next dev` that had shipped since Phase 3) — fixed with a Suspense wrapper,
+the standard shape for this exact Next.js error.
+
+**D-35. The `/id` shell's offline precache is one hand-rolled service worker, not
+Workbox.** `public/sw.js` caches-as-it-goes for `/id` and `/_next/static/*` only, and never
+touches `/api/*` (credential freshness is IndexedDB's job, via `useCredential`). Verified
+against a **production build** (`next build` + `next start`), not `next dev` — the dev
+server's HMR websocket noise makes the two impossible to tell apart by symptom alone, and a
+production build is what ID-8 actually needs to hold for. Phase 13 owns the real,
+general-purpose service worker and should replace this file outright rather than extend it.
+
+**D-36. The Scanner page (`/scan`) and the admin Scan-anomalies view have no design
+precedent (C13) and use plain English plus the existing token file, not the `T` dictionary
+or new Armenian copy.** Matches the admin module's own precedent (Phase 5,
+`nav-items.ts`'s `STATIC_LABELS`) for exactly the same reason: there is nothing in the
+design package to translate faithfully, and inventing trilingual copy for a screen the
+design never specified would be new product content wearing a translation's clothes. `/scan`
+sits outside both `(app)` and `(auth)` — it's gated by a device-entered scanner key in
+localStorage, not a JWT, matching `requireScannerKey`'s own reasoning that a door reader is
+a device, not a signed-in person.

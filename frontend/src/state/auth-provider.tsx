@@ -22,7 +22,41 @@ export type UserProfile = {
 };
 
 type LoginInput = { identifier: string; password: string; remember: boolean; deviceLabel: string };
-type AuthStatus = "booting" | "anon" | "authed";
+// "offline": the boot-time silent refresh never reached the server at all
+// (no network), on a device that has a real session on it recently — ID-8
+// needs this distinguished from "anon" (docs/decisions.md), because a
+// hard reload of /id while offline must not present a login screen. There
+// is no `user` in this state (no profile was ever fetched this boot) —
+// /id renders from its own IndexedDB-cached credential instead.
+type AuthStatus = "booting" | "anon" | "authed" | "offline";
+
+// Not a token, not sensitive — just "a real login or refresh succeeded on
+// this device before" (see the AuthStatus note above). Deliberately not
+// httpOnly/cookie-based: this only ever gates a client-side rendering
+// decision, never anything server-trusts.
+const HAS_AUTHED_BEFORE_KEY = "tessera.hasAuthedBefore";
+function markAuthedBefore() {
+  try {
+    window.localStorage.setItem(HAS_AUTHED_BEFORE_KEY, "1");
+  } catch {
+    // private mode / storage disabled — offline boot just won't have this
+    // signal, and falls back to "anon", which is always safe.
+  }
+}
+function hasAuthedBefore(): boolean {
+  try {
+    return window.localStorage.getItem(HAS_AUTHED_BEFORE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function clearAuthedBefore() {
+  try {
+    window.localStorage.removeItem(HAS_AUTHED_BEFORE_KEY);
+  } catch {
+    // nothing to clear if storage never worked in the first place
+  }
+}
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -51,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setUser(null);
     setStatus("anon");
+    clearAuthedBefore();
   }, []);
 
   useEffect(() => {
@@ -73,12 +108,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const refreshed = await refreshOnce();
-        if (!refreshed) {
+        if (refreshed === false) {
           if (!cancelled) setStatus("anon");
+          return;
+        }
+        if (refreshed === null) {
+          // Network never answered — not the same fact as "logged out"
+          // (ID-8). Only trust it on a device with a real recent session;
+          // one that's never authenticated (or explicitly logged out) has
+          // nothing cached to show offline anyway.
+          if (!cancelled) setStatus(hasAuthedBefore() ? "offline" : "anon");
           return;
         }
         const me = await apiJson<UserProfile>("/api/me");
         if (!cancelled) {
+          markAuthedBefore();
           setUser(me);
           setStatus("authed");
         }
@@ -97,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(input),
     });
     setAccessToken(body.accessToken);
+    markAuthedBefore();
     setUser(body.user);
     setStatus("authed");
   }, []);

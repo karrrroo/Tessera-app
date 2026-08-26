@@ -9,6 +9,15 @@
 // 2. `bg` (the four background names) is real design copy, but from a
 //    separate constant, `BG_T` in Tessera.dc.html — not part of the `T`
 //    export tessera-data.js this file otherwise mirrors. Copied verbatim.
+// 3. `qs` and `today` are real design copy from two more separate constants
+//    in Tessera.dc.html — `QRSHEET` and `TODAY_T`/`LESSON_T.title` — neither
+//    part of the `T` export either, so the original extraction missed them
+//    (roadmap Phase 6). Copied verbatim, except `today.now`/`room`/`drafts`
+//    and `TODAY_T.date`: the real schema has no period/time-of-day or room
+//    for a lesson (so there's no "current lesson" to highlight), and
+//    `drafts` depends on the gradebook's draft-count, which doesn't exist
+//    until Phase 7. The panel's heading uses `today.title` in place of a
+//    formatted date.
 const dict = {
   "nav": {
     "overview": "Обзор",
@@ -309,6 +318,16 @@ const dict = {
     "off": {
       "bar": "Нет соединения · показаны последние сохранённые данные",
       "tip": "Недоступно без подключения к интернету"
+    },
+    "qs": {
+      "title": "Ученический билет",
+      "show": "Показать QR",
+      "show2": "Покажите сканеру",
+      "offline": "Работает без интернета"
+    },
+    "today": {
+      "title": "Уроки на сегодня",
+      "empty": "Сегодня уроков нет"
     },
     "dlg": {
       "discardT": "Отменить черновики?",

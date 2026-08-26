@@ -21,7 +21,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     () => typeof window === "undefined" || window.innerWidth >= SIDEBAR_DEFAULT_OPEN_MIN_WIDTH,
   );
 
-  if (!user) return null;
+  // Offline boot with no live profile (Phase 6, ID-8: AuthProvider's
+  // "offline" status never has a `user`) — there is no role to build a nav
+  // for, but the route's own content must still render, so this degrades
+  // to bare content rather than blocking everything. A real offline nav is
+  // Phase 13's job, not this one.
+  if (!user) return <>{children}</>;
   const role = user.role;
 
   if (mode === "mobile") {

@@ -46,6 +46,36 @@
   --qr-bloom-1: #25D3C4;
   --qr-bloom-2: #0B3FC9;
   --qr-bloom-3: #062A8A;
+
+  /* TesseraQR's own card + modules (roadmap Phase 6, ID-5/ID-6) — fixed
+     regardless of theme, on purpose. The design prototype binds the QR
+     module color to var(--ink), which is correct-looking in light theme but
+     would render as light modules on a white card in dark theme: exactly
+     the low-contrast failure ID-6's rounding is trying to avoid causing.
+     "Scanners are calibrated for white" (ID-5) applies to the modules too,
+     not just the card background. */
+  --qr-card-bg: #FFFFFF;
+  --qr-ink: #000000;
+
+  /* IdCard (roadmap Phase 6, ID-2/brief §10) — "dark in both themes": this
+     card is a fixed physical-feeling artifact, not a themed UI surface, so
+     it never follows [data-tt]. Gradient stops and text opacities ported
+     from the design source's cardTint()/mixHex() (Tessera.dc.html) as
+     color-mix() against --accent-tint, so a non-default accent still tints
+     the card correctly; only the fixed white/black mix targets moved here. */
+  --id-card-gradient: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-tint) 10%, white 90%) 0%,
+    color-mix(in srgb, var(--accent-tint) 45%, white 55%) 14%,
+    var(--accent-tint) 42%,
+    color-mix(in srgb, var(--accent-tint) 45%, black 55%) 72%,
+    color-mix(in srgb, var(--accent-tint) 12%, black 88%) 100%
+  );
+  --id-card-kind-fg: rgba(16, 17, 18, .55);
+  --id-card-fg: #FFFFFF;
+  --id-card-fg-2: rgba(255, 255, 255, .68);
+  --id-card-fg-3: rgba(255, 255, 255, .5);
+  --id-card-chip-bg: rgba(255, 255, 255, .14);
 }
 
 /* Theme (light/dark) — ink, hairlines, glass, status colors, the default

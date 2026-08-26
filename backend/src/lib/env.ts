@@ -19,6 +19,20 @@ const schema = z.object({
   RESET_SECRET: z
     .string({ required_error: "RESET_SECRET is required (see .env.example)" })
     .min(32, "RESET_SECRET must be at least 32 characters"),
+  // Phase 6 (identity/QR) — two independent keys, not one, so that a leak of
+  // the verifier's signing key alone can't be used to mint new handles, and
+  // vice versa (roadmap "the payload is an opaque handle plus a truncated MAC").
+  QR_HANDLE_KEY: z
+    .string({ required_error: "QR_HANDLE_KEY is required (see .env.example)" })
+    .min(32, "QR_HANDLE_KEY must be at least 32 characters"),
+  QR_SIGNING_SECRET: z
+    .string({ required_error: "QR_SIGNING_SECRET is required (see .env.example)" })
+    .min(32, "QR_SIGNING_SECRET must be at least 32 characters"),
+  // Shared door-reader key (roadmap: "a door reader is not a person" — not a
+  // user role, checked by requireScannerKey, not requireAuth).
+  SCANNER_API_KEY: z
+    .string({ required_error: "SCANNER_API_KEY is required (see .env.example)" })
+    .min(32, "SCANNER_API_KEY must be at least 32 characters"),
 });
 
 function loadEnv() {

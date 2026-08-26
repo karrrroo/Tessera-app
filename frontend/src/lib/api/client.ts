@@ -23,9 +23,16 @@ export class ApiRequestError extends Error {
 // genuine token reuse, which revokes the whole session family (D-12). Every
 // refresh call in the app — boot-time or 401-triggered — must go through
 // this single in-flight promise, never call the endpoint directly.
-let refreshInFlight: Promise<boolean> | null = null;
+//
+// Three-way result, not a boolean (Phase 6 fix, docs/decisions.md): `false`
+// means the server was reached and said no (an expired/revoked refresh
+// cookie — genuinely not authenticated). `null` means the server was never
+// reached at all (offline) — that is not the same fact, and AuthProvider
+// treats it differently so losing connectivity for a moment doesn't read
+// as a logout everywhere in the app.
+let refreshInFlight: Promise<boolean | null> | null = null;
 
-export async function refreshOnce(): Promise<boolean> {
+export async function refreshOnce(): Promise<boolean | null> {
   if (!refreshInFlight) {
     refreshInFlight = fetch("/api/auth/refresh", { method: "POST", credentials: "include" })
       .then(async (res) => {
@@ -34,7 +41,7 @@ export async function refreshOnce(): Promise<boolean> {
         setAccessToken(body.accessToken);
         return true;
       })
-      .catch(() => false)
+      .catch(() => null)
       .finally(() => {
         refreshInFlight = null;
       });
@@ -55,8 +62,14 @@ export async function apiFetch(path: string, init: RequestInit = {}, isRetry = f
     if (body?.error.code === "TOKEN_EXPIRED") {
       const refreshed = await refreshOnce();
       if (refreshed) return apiFetch(path, init, true);
-      setAccessToken(null);
-      notifyAuthFailure();
+      // refreshed === false: the server was reached and said no — really
+      // logged out. refreshed === null: the network never answered at
+      // all, which must not be treated as a logout (Phase 6, ID-8) — the
+      // original 401 just propagates as this one request's own failure.
+      if (refreshed === false) {
+        setAccessToken(null);
+        notifyAuthFailure();
+      }
     }
   }
   return res;

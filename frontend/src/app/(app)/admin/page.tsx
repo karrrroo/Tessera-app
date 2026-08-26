@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SetupChecklist } from "@/components/admin/setup-checklist";
 
 export default function AdminOverviewPage() {
@@ -12,6 +13,9 @@ export default function AdminOverviewPage() {
         </p>
       </div>
       <SetupChecklist />
+      <Link href="/admin/scan-anomalies" className="text-sm underline" style={{ color: "var(--ink-2)" }}>
+        Scan anomalies →
+      </Link>
     </main>
   );
 }
