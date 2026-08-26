@@ -29,7 +29,10 @@
   --color-glass-solid: var(--glass-solid);
   --color-panel: var(--panel);
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-ok: var(--ok);
+  --color-ok-fg: var(--ok-fg);
+  --color-warning: var(--warning);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
   --color-accent-tint: var(--accent-tint);

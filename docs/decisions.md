@@ -306,3 +306,79 @@ create-next-app scaffold defaults (`--background`/`--foreground`) were left as a
 intentionally-failing exception through most of this phase's build, per the plan to close
 it once `ThemeProvider`/`BackgroundProvider` existed — that cutover happened by the end of
 this phase, so `tokens:check` now passes with no exceptions at all.
+
+## 2026-08-26 — Phase 5
+
+**D-21. There is no admin→institution link anywhere in the schema.** Neither `student`
+nor `teacher`'s pattern (their own table, with an `institution_id` column) exists for
+admins — there's no `admin` table at all, and `"user"` itself has no `institution_id`.
+The seed and the current schema are single-tenant in practice (exactly one row in
+`institution`), so every admin route resolves "the actor's institution" as that sole row
+(`repo.resolveActorInstitutionId`) and throws loudly if that ever stops being true, rather
+than guessing. C2 forbids adding the missing link via a schema change; a real multi-tenant
+deployment needs one.
+
+**D-22. `enrollment`'s unconditional `unique(student_id, academic_year_id)` makes the
+roadmap's own acceptance test for transfer impossible to satisfy literally.** The
+roadmap's Done-when #16 describes a transfer as leaving two rows behind — "the old
+enrollment reads transferred, a new active one exists" — but the schema allows at most one
+enrollment row per student per year, full stop, with no partial/filtered exception (verified
+against `tessera-schema.sql` directly, not just the Drizzle introspection). C2 forbids
+changing that. Resolved as: a transfer is an in-place update of the same row's `classId`
+(status stays `active` — the student *is* actively enrolled, just in a different class),
+with the change written to `audit_log` (`before`/`after` = the old and new classId) so the
+event itself has a durable record. The other half of that Done-when item — "prior marks
+stay attached to the old class" — holds regardless of how enrollment is modeled, since
+`assessment`/`mark` reference `class_id` directly and never join through `enrollment` at
+all. Verified end to end: transfer, depart, and a rejected double-depart all behave
+correctly, and the audit trail records both real events.
+
+**D-23. Import row "resolved" data (a row's looked-up `classId`/`subjectId`) is never
+persisted — recomputed by re-running the same validator every time a batch is read,
+patched, or applied.** `import_row` has only `raw` (jsonb) and `message` (text); there's
+no dedicated column for it. Storing a computed value that could silently drift from `raw`
+after an edit was the wrong direction — re-deriving it from the same `validateStudentRow`/
+`validateTeacherRow` functions the preview screen already uses means apply can never
+resolve a row differently than what the admin reviewed on screen. A first draft of `apply`
+re-derived `classId` from the raw class-label text independently instead of reusing the
+validator, and teacher import never inserted `teaching_assignment` rows at all despite the
+roadmap explicitly requiring and testing it (Done-when #12) — both caught and fixed before
+any real testing, by re-reading the code rather than by a failing test.
+
+**D-24. `import_batch` has no `academic_year_id` column**, so every request that touches
+an existing batch (re-read, patch a row, apply) takes `academicYearId` explicitly from the
+client rather than looking it up server-side. A minor, schema-driven API shape difference
+from the roadmap's endpoint table, which doesn't show that parameter.
+
+**D-25. Bulk password hashing uses `UV_THREADPOOL_SIZE`, not a literal `worker_threads`
+pool.** The roadmap says "hash across a worker pool sized to `os.cpus().length - 1`."
+`argon2`'s async `hash()` is an N-API `AsyncWorker` that already queues onto libuv's
+threadpool — sizing that pool (set once, in `backend/src/index.ts`, before anything else
+can initialize it) and calling `Promise.all` over plain `hashPassword` calls gets the same
+real cross-core parallelism the roadmap is actually after, without hand-rolling a
+`worker_threads` pool that would need its own argon2 binding loaded per thread. Measured on
+a 600-row apply (as the roadmap's own performance note insists on doing, not assuming): the
+full apply — 600 Argon2id hashes plus all writes — completed in ~13s, against the
+roadmap's own estimate of 36s for serial hashing alone.
+
+**D-26. A found inconsistency in the roadmap's own Done-when list, not fixed against but
+worth recording.** Done-when #5 says fixing all twelve planted defects first (step 6,
+"errorCount reaches 0") and only then applying (step 8) should raise counts "by 588" — but
+588 is `600 - 12`, the count that would result from applying with the twelve *un-fixed*
+rows excluded, not the all-fixed scenario steps 6-7 actually describe. Verified directly:
+fixing all twelve first and then applying raises counts by 600, which is the internally
+consistent result given the steps as written. Treated as a stale number left over from an
+earlier draft of this checklist, not a target to hit.
+
+**D-27. `useCurrentAcademicYear` (frontend) resolves "the current year" as whichever
+academic year has the latest `startsOn`, with no way for an admin to pick a different one.**
+Deliberately minimal for this phase — a real school has one forward-looking year at a time
+in practice, and a year switcher belongs to whichever later phase first needs to look at a
+prior year's data. Its real sharp edge: two years with an identical `startsOn` tie-break in
+an order this hook doesn't control, and everything scoped to "the current year" (roster,
+classes, assignments, an import's class-label resolution) silently resolves against
+whichever one wins. Caught while testing this phase, by two of its own test academic years
+coincidentally sharing a `startsOn` — not a defect in a school's real data, which won't
+create that ambiguity, but worth knowing about if a support request ever looks like "my
+import can't find any of my classes" and the school has more than one year on the same
+start date.

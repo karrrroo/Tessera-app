@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import { z } from "zod";
 import { pool } from "../db/client.js";
 import { authRouter } from "../modules/auth/routes.js";
+import { adminRouter } from "../modules/admin/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
 import { asyncHandler } from "./async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "./errors.js";
@@ -42,6 +43,7 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/admin", adminRouter);
 
   app.get(
     "/api/me",

@@ -34,9 +34,10 @@
      accent; the per-theme black inversion below is the default. */
   --accent-tint: #5A6472;
 
-  /* Text on a solid --danger fill (OfflineBanner) — white works against
-     both themes' --danger shade, so it isn't itself theme-scoped. */
+  /* Text on a solid --danger/--ok fill (OfflineBanner; a "done" pill) —
+     white works against both themes' shades, so neither is theme-scoped. */
   --danger-fg: #ffffff;
+  --ok-fg: #ffffff;
 
   /* The docked QR button's inverse-bloom fill (brief §9, final per
      corrections-4 §3.1) — a one-off spec'd gradient for this exact button,
@@ -64,6 +65,9 @@
   --surface2: #141822;
   --danger: #c9634f;
   --ok: #5f8a6e;
+  /* Hand-added — the design has no warning/amber color anywhere (admin
+     screens have no design precedent at all, C13: "build from primitives"). */
+  --warning: #c78d1d;
 
   /* Black accent inverts on dark surfaces (brief §8) — black is invisible
      on --bg-base here, so black-as-accent becomes near-white instead. */
@@ -92,6 +96,7 @@
   --surface2: #F2F2F4;
   --danger: #8a4a3e;
   --ok: #3d6b4d;
+  --warning: #8f6b1a;
 
   --accent: #101112;
   --accent-fg: #F4F3F1;

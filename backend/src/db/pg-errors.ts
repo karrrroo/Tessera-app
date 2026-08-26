@@ -14,6 +14,11 @@ const CONSTRAINT_TO_APP_CODE: Record<string, { code: string; status: number }> =
   one_current_mark: { code: "MARK_ALREADY_CURRENT", status: 409 },
   reason_required_when_superseding: { code: "MARK_REASON_REQUIRED", status: 422 },
   user_email_key: { code: "USER_EMAIL_TAKEN", status: 409 },
+  // Phase 5 (admin) — class_academic_year_id_grade_letter_key is the same
+  // collision the generator itself pre-checks (roadmap: existing combos are
+  // "skipped", not an error), but the single-class POST route has no
+  // pre-check to fall back on, so it needs its own named code too.
+  class_academic_year_id_grade_letter_key: { code: "CLASS_ALREADY_EXISTS", status: 409 },
 };
 
 const SQLSTATE_TO_APP_CODE: Record<string, { code: string; status: number }> = {
