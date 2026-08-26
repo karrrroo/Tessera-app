@@ -761,3 +761,76 @@ during it, but is recorded there rather than twice.
 `gemini-3.6-flash` as its replacement — a straightforward consequence of building against
 a model catalog that moves faster than any fixed reference, not a design decision.
 
+## 2026-08-26 — Mobile shell: the floating nav and Iter button weren't actually floating
+
+**D-61. On any screen taller than one viewport, the pill nav and the Iter launcher button
+render at a fixed position within the page's own content height, not the viewport —
+meaning on a long screen they sit far below the fold, invisible until the user scrolls all
+the way down, and on a short screen they can render partially off the top.** Found via a
+requested audit at a real 390px viewport width, not by inspection: `/subjects` (a genuinely
+tall list) showed no pill nav at all in the initial view; measuring confirmed the mobile
+content wrapper (`app-shell.tsx`, `className="relative h-full overflow-y-auto"`) had a
+*measured* height equal to its own content (1040px on `/subjects`, 1212px on `/settings`),
+not the 844px viewport, because `h-full` (100%) has no ancestor with a *definite* height to
+resolve against — `<body>` (`app/layout.tsx`) was `min-h-full`, letting it grow to fit
+content instead of staying pinned to the viewport. Both the pill nav and the Iter button are
+`position: absolute; bottom: Npx` inside that wrapper, so they inherited whatever height the
+wrapper actually ended up being. Fixed by changing body to `h-full` (a *definite* 100%, not
+a floor) — confirmed this doesn't affect the desktop layout (native page scroll still works;
+`height: 100%` doesn't imply `overflow: hidden`) or the desktop "preview mobile" `PhoneFrame`
+mode (its content slot gives `h-full` an explicit pixel height of its own, taking precedence
+over `body` regardless of `body`'s value, which is exactly why that mode was never affected
+by this bug in the first place).
+
+**D-62. Separately, the pill nav's own outer wrapper had a `className="absolute ..."` and an
+inline `style={{ position: "relative" }}` on the same element — the inline style always wins,
+so the wrapper was never actually `position: absolute` at all, only `relative` (an offset
+from its own normal-flow position, not an anchor to a container edge).** This alone would
+have kept the pill nav from floating even after D-61's fix. Likely origin: the inline style
+was added so the docked QR/`+` button (itself `position: absolute`) would have a positioned
+ancestor to anchor against — but the `absolute` class already sitting on the same element
+serves that purpose equally well, so the fix is simply removing the redundant, conflicting
+inline style rather than reconciling the two.
+
+**D-63. Fixing D-61 changed how the Iter button's own overlay is layered, in a way worth
+recording.** The launcher and its panel background are new this project (Phase 11, built
+early); once the mobile content wrapper is genuinely viewport-sized, a `position: absolute`
+overlay is layered by CSS *after* every `position: static` sibling within the same stacking
+context, regardless of DOM order — so an overlay placed early in the DOM can still paint on
+top of later, unpositioned siblings. This surfaced while implementing D-64 (the Iter panel's
+own background), not D-61 directly, but is the same mechanism: every sibling meant to sit
+*above* a positioned background overlay in this codebase needs its own `position: relative`
+(or better), not just DOM order, once it shares a stacking context with that overlay.
+
+## 2026-08-26 — Iter's empty-state background (brief-chain/06-corrections-4 §2)
+
+**D-64. The Iter empty state's background — two drifting radial blooms fading to nothing
+well inside the panel, no visible edge anywhere — is implemented per the brief's later
+correction, not the interactive prototype's own (smaller, earlier) values.** `Tessera.dc.html`
+renders this same empty state with ellipse sizes `48% 46%`/`40% 38%`; `06-corrections-4` §2 —
+chronologically later in the nine-file brief chain — explicitly replaces an even earlier
+"flat teal rectangle with a hard edge" with `120% 80%`/`100% 70%` ellipses instead, and is
+explicit that the fade must complete well inside the panel with no visible edge anywhere.
+Built to the correction's exact values, not the prototype's.
+
+**D-65. The background is sized to the whole panel, not the smaller centered flex box the
+mark/greeting/chips sit in.** The first attempt scoped the two gradient layers to that inner
+box alone; because a percentage-based `ellipse` radius is relative to *its own containing
+block*, constraining it to a box only as tall as its own content (a `flex-1` row centered
+between the header and composer) made the vertical radius small enough that the `transparent`
+stop never actually completed before the box's own edge — producing exactly the hard cutoff
+the correction was written to eliminate. Confirmed by screenshot, not by calculation alone.
+Moving the background to the full panel (sibling to the header, message list, and composer,
+each of which needed its own `position: relative` per D-63) gives the same percentages a tall
+enough canvas for the fade to complete naturally, matching the brief's own phrasing — "both
+sit on the panel's normal glass background" — literally.
+
+**D-66. Grain reuses the existing `<Grain/>` component (`components/design/grain.tsx`,
+built in Phase 4) rather than a second inline `feTurbulence` layer.** The two new colors this
+background needed — `--iter-mid` (the thinking pill's own middle conic-gradient stop) and
+reusing the already-tokenized `--qr-bloom-1` for the teal bloom — went into `tessera.css`
+rather than being inlined, keeping `tokens:check` meaningful. `IterMark`/greeting/second line
+are pinned to a fixed white (`--iter-fg`, already defined for the launcher button's own icon)
+rather than the theme's `--ink`, because the brief is explicit they render "all in white"
+regardless of theme — a saturated bloom needs a fixed-contrast label, not a theme-following one.
+

@@ -3,8 +3,43 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/state/auth-provider";
 import { useT } from "@/i18n/locale-provider";
+import { Grain } from "@/components/design/grain";
 import { IterMark } from "./iter-mark";
 import { useIter } from "./iter-provider";
+
+// brief-chain/06-corrections-4 §2: two radial blooms, not a rectangle, on
+// the panel's own glass — every stop reaches fully transparent well inside
+// the panel so there is no edge anywhere, and each bloom drifts
+// independently (18s/26s, linear, alternating) by no more than 8% of the
+// panel's width. This exact background appears nowhere else in the
+// product, so its keyframe names are scoped accordingly.
+function IterEmptyBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: 0.55,
+          background: "radial-gradient(ellipse 120% 80% at 30% 15%, var(--accent-tint) 0%, transparent 62%)",
+          animation: "tessera-iter-drift-a 18s linear infinite alternate",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: 0.4,
+          background: "radial-gradient(ellipse 100% 70% at 75% 5%, var(--qr-bloom-1) 0%, transparent 58%)",
+          animation: "tessera-iter-drift-b 26s linear infinite alternate",
+        }}
+      />
+      <Grain />
+      <style>{`
+        @keyframes tessera-iter-drift-a { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
+        @keyframes tessera-iter-drift-b { from { transform: translateX(4%); } to { transform: translateX(-4%); } }
+      `}</style>
+    </div>
+  );
+}
 
 // IT-9: the 2px animated conic-gradient border. This animation must appear
 // nowhere else in the product — its keyframe/property names are scoped
@@ -82,10 +117,11 @@ export function IterPanel() {
           boxShadow: "inset 0 1px 0 var(--hair-top)",
         }}
       >
-        <div className="flex justify-center pb-0.5 pt-2.5 tablet:hidden">
+        {isEmpty && <IterEmptyBackground />}
+        <div className="relative flex justify-center pb-0.5 pt-2.5 tablet:hidden">
           <button type="button" onClick={closePanel} aria-label={t.iter.close} className="h-1.5 w-9 rounded-full" style={{ background: "var(--ink-3)", opacity: 0.5 }} />
         </div>
-        <div className="flex h-14 flex-none items-center gap-2.5 px-4.5">
+        <div className="relative flex h-14 flex-none items-center gap-2.5 px-4.5">
           <span className="flex-none" style={{ color: "var(--ink)" }}>
             <IterMark size={22} />
           </span>
@@ -104,22 +140,22 @@ export function IterPanel() {
           </button>
         </div>
 
-        <div ref={listRef} className="flex flex-1 flex-col overflow-y-auto px-4.5 pb-3.5">
+        <div ref={listRef} className="relative flex flex-1 flex-col overflow-y-auto px-4.5 pb-3.5">
           {isEmpty && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4.5 py-5">
-              <span style={{ color: "var(--ink)", opacity: 0.85 }}>
+            <div className="relative flex flex-1 flex-col items-center justify-center gap-4.5 py-5">
+              <span className="relative" style={{ color: "var(--iter-fg)" }}>
                 <IterMark size={40} />
               </span>
-              <div className="flex flex-col items-center gap-1 text-center">
-                <span className="font-serif text-xl font-semibold" style={{ color: "var(--ink)" }}>
+              <div className="relative flex flex-col items-center gap-1 text-center">
+                <span className="font-serif text-xl font-semibold" style={{ color: "var(--iter-fg)" }}>
                   {t.iter.hi}
                   {firstName || t.common.roleStudent}
                 </span>
-                <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+                <span className="text-sm" style={{ color: "var(--iter-fg)" }}>
                   {t.iter.line2}
                 </span>
               </div>
-              <div className="flex w-full flex-col gap-2">
+              <div className="relative flex w-full flex-col gap-2">
                 {chips.map((chip, i) => (
                   <button
                     key={i}
@@ -166,7 +202,7 @@ export function IterPanel() {
           )}
         </div>
 
-        <div className="flex-none px-4 pb-4 pt-2">
+        <div className="relative flex-none px-4 pb-4 pt-2">
           <div className="flex flex-col gap-2.5 rounded-[26px] p-3" style={{ background: "var(--surface2)", border: "1px solid var(--hair)" }}>
             <textarea
               value={draft}

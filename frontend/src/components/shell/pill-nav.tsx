@@ -40,7 +40,7 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
   );
 
   return (
-    <div className="pointer-events-none absolute inset-x-4 bottom-[calc(14px+env(safe-area-inset-bottom))]" style={{ position: "relative" }}>
+    <div className="pointer-events-none absolute inset-x-4 bottom-[calc(14px+env(safe-area-inset-bottom))]">
       <div className="glass-panel pointer-events-auto flex h-[58px] items-center" style={{ borderRadius: 999, display: "grid", gridTemplateColumns: "1fr 78px 1fr" }}>
         {renderGroup(left)}
         <div />

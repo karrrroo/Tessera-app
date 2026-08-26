@@ -3,7 +3,11 @@
 Source: `docs/reference/tessera-roadmap.md`, Phase 11. Built out of order — this build has
 only otherwise reached Phase 8 — at the user's explicit direction; see `docs/decisions.md`
 D-56 through D-60, which also cover why the roadmap itself stops short of a real model
-connection and why this phase overrides that.
+connection and why this phase overrides that. D-61 through D-66 record a follow-up pass:
+a real, pre-existing mobile-shell bug (the floating pill nav and Iter button weren't
+actually pinned to the viewport on any screen taller than one) found via a requested
+390px-viewport audit, and the Iter empty-state background implemented per the design
+brief's own later correction.
 
 ## Delivers
 
@@ -60,6 +64,23 @@ mapped any object with a `.code` property to a generic `INTERNAL` and returned w
 logging anything — a real bug found only by needing to debug through it. Fixed by logging
 whenever that branch's own mapping falls through to `INTERNAL`.
 
+**The mobile pill nav and the Iter launcher were never actually pinned to the viewport
+(D-61/D-62).** Found via a requested audit at a real 390px viewport width: on any screen
+taller than one viewport (`/subjects`, `/settings`), both rendered far below the fold —
+invisible until scrolling all the way down — because the mobile content wrapper's `h-full`
+resolved against its own grown content height, not the true viewport, and separately the
+pill nav's outer wrapper had a conflicting inline `position: relative` silently overriding
+its own `absolute` class. Both fixed; this predates Phase 11 (the shell dates to Phase 4/6)
+but Iter's own launcher button, copying the same technique, inherited the bug too.
+
+**The Iter panel's own background had a visible hard edge on the first attempt (D-65).**
+Scoping the two gradient blooms to the small centered flex box the greeting/chips sit in —
+rather than the full panel — made the percentage-based ellipse radii too small to finish
+fading before that box's own edge, producing exactly the "hard edge" the design correction
+this background implements was written to eliminate. Caught by screenshot, not by
+calculation; fixed by moving the background to the full panel and giving each sibling
+(header, message list, composer) its own `position: relative` so they still paint above it.
+
 ## Verified directly (not just by inspection)
 
 - A real Gemini reply, grounded in real seed data: asked a teacher account "which of your
@@ -79,6 +100,14 @@ whenever that branch's own mapping falls through to `INTERNAL`.
 - `npm run tokens:check` and `npm run i18n:check` both pass with the new `--iter-*` tokens
   and the new top-level `iter` dictionary namespace (hy/en/ru, 337 keys, all three locales
   in sync).
+- After the D-61/D-62 fixes: the pill nav and Iter button measured at the identical,
+  correct, viewport-anchored position on every screen checked (`/overview`, `/subjects`,
+  `/archive`), not just the one that happened to be short enough to look right by
+  coincidence — and unaffected on desktop (native page scroll still works) and in the
+  desktop "preview mobile" `PhoneFrame` mode (its own explicit-pixel content slot was never
+  affected by the bug and stays correctly sized after the fix).
+- After the D-65 fix: the empty-state background screenshotted cleanly on desktop, mobile,
+  and a second real account, with no visible edge anywhere the color meets the plain glass.
 
 **Not verified in this pass, and explicitly out of scope for this build of the phase**:
 attachments (IT-6 — image/file/voice/screenshot, `POST /api/iter/attachments`,
