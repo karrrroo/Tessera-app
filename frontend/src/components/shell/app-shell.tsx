@@ -53,12 +53,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       <OfflineBanner />
       <AppHeader />
       <SidebarNav items={items} open={railOpen} onToggle={() => setRailOpen((o) => !o)} />
-      <main
+      {/* A `<div>`, not `<main>` — every route under (app) already renders
+          its own <main> as its page root (RoutePlaceholder, settings, every
+          admin page, and this phase's own pages); nesting a second <main>
+          here would be an invalid, confusing duplicate landmark. Found
+          while testing Phase 7 (a Playwright locator("main") strict-mode
+          error surfaced it), but it dates to Phase 4 and applies app-wide. */}
+      <div
         className="pt-16 transition-[margin-left] duration-200"
         style={{ marginLeft: contentMargin, minHeight: "100vh", transitionTimingFunction: "var(--ease-out)" }}
       >
         {children}
-      </main>
+      </div>
     </>
   );
 }

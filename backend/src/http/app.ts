@@ -5,6 +5,7 @@ import { pool } from "../db/client.js";
 import { authRouter } from "../modules/auth/routes.js";
 import { adminRouter } from "../modules/admin/routes.js";
 import { identityRouter } from "../modules/identity/routes.js";
+import { recordRouter } from "../modules/record/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
 import { asyncHandler } from "./async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "./errors.js";
@@ -49,6 +50,9 @@ export function createApp() {
   // (roadmap Phase 6) — mounted at /api, not /api/me, since it also owns
   // the /api/verify* paths.
   app.use("/api", identityRouter);
+  // /api/me/record, /api/me/subjects/:id, /api/me/archive,
+  // /api/me/marks/:id/history (roadmap Phase 7).
+  app.use("/api/me", recordRouter);
 
   app.get(
     "/api/me",

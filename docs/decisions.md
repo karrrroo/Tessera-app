@@ -492,3 +492,79 @@ design never specified would be new product content wearing a translation's clot
 sits outside both `(app)` and `(auth)` — it's gated by a device-entered scanner key in
 localStorage, not a JWT, matching `requireScannerKey`'s own reasoning that a door reader is
 a device, not a signed-in person.
+
+## 2026-08-26 — Phase 7
+
+**D-37. The default term, when a request omits `termId`, is the resolved academic year's
+first term by `index` — not "whichever term has already started."** This seed data's own
+academic year starts a few days *after* the date this phase was built and tested on, so
+"already started" would resolve to *no* term at all right now, an edge case with no good
+answer. Index 1 is unambiguous and matches the natural reading of "show me my record" with
+no other information. `termId`, when given, is validated against the student's own resolved
+academic year specifically, not merely "some term in this institution" — a stricter reading
+than `RECORD_TERM_NOT_FOUND`'s description, chosen because a student's `classId` is fixed to
+one enrollment year; a term from a different year has no assessments to show under it
+regardless, and validating loosely would just trade one failure mode for a more confusing
+one.
+
+**D-38. Three fields the design mockup renders have no real data behind them, so none of
+the three were built.** The subjects list/detail "meta" line (design: weekly-hours count) —
+no table anywhere carries hours-per-week for a subject or a class, so `teacherName` (real,
+already returned by `/api/me/record`) stands in its place instead. Archive's `attestations`
+— no attestation/document table exists at all (the same category of gap as D-24); the field
+ships as an always-empty array so the shape is ready the day one gets added, rather than
+being invented or silently dropped. Credential *category* (design: `comp`/`course`/`vol`/
+`extra`, four made-up values) — the real seed data uses five entirely different values
+(`volunteering`/`art`/`course`/`olympiad`/`sport`), none of which the `T` dictionary has a
+translation for; category is simply not displayed in the read-only record (title and date
+carry the substance), rather than showing an untranslated raw enum string to a student.
+
+**D-39. `TopicBreakdown` renders nothing when empty, full stop — not one of the two designed
+empty-state messages (`sj.noTopicsTitle`/`emptyTopicsTitle`) that exist for exactly this
+case.** The roadmap is explicit and literal here ("renders nothing when `topicBreakdown` is
+empty — not a 'no data' card, just absent, with the detail view standing on its own"),
+which overrides the design copy's implied usage. Both design strings are real and
+unused by choice, not missed.
+
+**D-40. Two pieces of copy the design defines but never actually binds anywhere in its own
+markup are put to real use here.** `ov.legendDraft`/`legendOk` ("informal credential, under
+review/approved") — a small colored dot on each overview mosaic row, present only when that
+subject has a pending or approved credential request, using this exact copy as its tooltip.
+`cr.title` ("Non-formal credentials") — reused as the heading for the subject detail view's
+own credentials section, since the design's own screen for `cr.*` (a separate `/credentials`
+submission flow) is out of Phase 7's backend/frontend scope entirely — the roadmap's own
+Backend and Frontend sections for this phase specify only the record endpoints and screens,
+with no `/api/credentials` anywhere; Done-when #7's passing mention of "credentials" as a
+fifth screen is read as the subject-detail sub-section built here, not a mandate to build
+the standalone submission screen a `/credentials` nav item points at.
+
+**D-41. `MarkHistorySheet`'s heading borrows Phase 8's own copy, because the roadmap's
+stated source for it doesn't actually contain it.** The Screens table points this sheet at
+`T.dlg.*`, but every key under `dlg` is a teacher-facing publish/discard/decline confirmation
+— nothing about "old value, new value, reason" for a student viewing a correction. `T.scr.gb
+.histTitle`/`histSub`/`reason` (Phase 8's teacher-facing cell history: "Change history" /
+"Complete audit trail — records are never deleted" / "Reason:") is the same real design copy
+for the identical underlying concept, just needed here first since Phase 7 ships before
+Phase 8. The old→new value pair itself is shown as two colored chips and an arrow, needing
+no label text at all.
+
+**D-42. A real, cross-cutting bug found while testing this phase, unrelated to its own
+substance: every route under `(app)` renders a nested `<main>` landmark.** `AppShell`'s
+desktop layout wraps `{children}` in its own `<main>`, and every page built since Phase 4 —
+`RoutePlaceholder`, `/settings`, every admin page, `/id`, and now every Phase 7 page — already
+renders `<main>` as its own root, on the reasonable assumption that it *is* the page's main
+content landmark. The result is two nested `<main>` elements on every single authenticated
+page in the app, invalid per the HTML spec and confusing to any accessibility tooling that
+walks landmarks. Found by a Playwright `locator("main")` strict-mode error while testing a
+Phase 7 screen, fixed with a one-line change in `AppShell` (`<main>` → `<div>`) rather than
+touching any of the many existing pages, since they were already correct.
+
+**D-43. The populated-archive rendering path (a previous year with real final marks) was not
+exercised against live data — this seed has exactly one academic year, so `GET
+/api/me/archive` returns `{"years":[]}` for every seeded student, verified directly, and that
+is the only shape reachable right now.** `ArchiveYear` reuses the same aggregation
+(`average()`, group-by-subject) and rendering primitives (`gradeColorVar`, locale-picked
+name) already verified live on the overview mosaic and subject list/detail screens, so this
+is a real gap in *live coverage*, not in code review, and is recorded rather than quietly
+assumed away.
+

@@ -2,8 +2,9 @@
 @import "../design/tessera.css";
 
 /* Tessera design tokens as Tailwind utilities (roadmap Phase 4: "colours are
-   references, never literals") — e.g. bg-ink, text-ink-2, bg-surface,
-   border-hair, bg-g4, bg-accent, text-accent-fg. Tailwind v4 has no
+   references, never literals") — e.g. bg-ink, text-ink-2, bg-panel (the
+   design source's own `var(--surface)`, renamed here), border-hair, bg-g4,
+   bg-accent, text-accent-fg. Tailwind v4 has no
    tailwind.config.ts color table; @theme inline is the v4-native equivalent
    of the roadmap's JS config snippet. */
 @theme inline {
@@ -50,6 +51,7 @@
   --color-g8: var(--g8);
   --color-g9: var(--g9);
   --color-g10: var(--g10);
+  --color-mark-tile-fg: var(--mark-tile-fg);
   --color-qr-card-bg: var(--qr-card-bg);
   --color-qr-ink: var(--qr-ink);
   --color-id-card-kind-fg: var(--id-card-kind-fg);

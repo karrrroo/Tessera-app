@@ -180,6 +180,11 @@
   --g8: #3f7f8c;
   --g9: #2c5f8f;
   --g10: #1d3f79;
+  /* Text on a solid --g{n} fill (MarkSequence's numbered chips) — white
+     reads on every one of the ten grade colors, and REC-2 forbids applying
+     opacity to a grade color to "soften" it for less contrast, so this is
+     fixed rather than theme-scoped, same reasoning as --danger-fg/--ok-fg. */
+  --mark-tile-fg: #FFFFFF;
 }
 
 /* Layered glass, layer 2+3 (brief §5.3) — the frosted panel + its top-edge

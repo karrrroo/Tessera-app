@@ -1,22 +1,31 @@
 "use client";
 
-import { useAuth } from "@/state/auth-provider";
+import { useEffect, useState } from "react";
+import { Mosaic } from "@/components/record/mosaic";
+import { TermSwitcher } from "@/components/record/term-switcher";
+import { recordApi, type RecordResponse } from "@/lib/api/record";
 import { useT } from "@/i18n/locale-provider";
 
 export default function OverviewPage() {
-  const { user } = useAuth();
   const t = useT();
+  const [record, setRecord] = useState<RecordResponse | null>(null);
+  const [termId, setTermId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    recordApi.getRecord(termId).then(setRecord);
+  }, [termId]);
+
+  if (!record) return <main className="flex-1 p-8" />;
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-        {t.nav.overview}
-      </h1>
-      <p className="text-sm" style={{ color: "var(--ink-2)" }}>
-        Signed in as {user?.firstName} {user?.lastName} ({user?.role})
-      </p>
-      <p className="text-xs" style={{ color: "var(--ink-3)" }}>
-        The mosaic and real content arrive in Phase 7 — this is a gating placeholder.
-      </p>
+    <main className="mx-auto w-full max-w-2xl space-y-4 p-8">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-serif text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+          {t.nav.overview}
+        </h1>
+        <TermSwitcher terms={record.availableTerms} activeTermId={record.term.id} onChange={setTermId} />
+      </div>
+      <Mosaic subjects={record.subjects} />
     </main>
   );
 }
