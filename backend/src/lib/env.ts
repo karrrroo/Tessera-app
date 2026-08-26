@@ -33,6 +33,8 @@ const schema = z.object({
   SCANNER_API_KEY: z
     .string({ required_error: "SCANNER_API_KEY is required (see .env.example)" })
     .min(32, "SCANNER_API_KEY must be at least 32 characters"),
+  // Phase 11 (Iter) — Gemini API key for generating real replies.
+  GOOGLE_AI_API_KEY: z.string({ required_error: "GOOGLE_AI_API_KEY is required (see .env.example)" }).min(1),
 });
 
 function loadEnv() {

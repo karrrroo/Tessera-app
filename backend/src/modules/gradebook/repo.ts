@@ -66,17 +66,23 @@ export async function countDrafts(classId: string, subjectId: string, termId: st
   return row?.n ?? 0;
 }
 
-// Armenian collation (hy-AM, ICU — ships with this Postgres, verified
-// directly) on both name parts — a plain byte-order sort does not match an
-// Armenian alphabetical list, and a teacher reading down a register that
-// doesn't match their paper one will not trust the screen.
+// Armenian collation (ICU — ships with this Postgres, verified directly)
+// on both name parts — a plain byte-order sort does not match an Armenian
+// alphabetical list, and a teacher reading down a register that doesn't
+// match their paper one will not trust the screen. The canonical ICU name
+// is "hy-AM-x-icu", not the bare "hy-AM" alias — Postgres 17 (local dev)
+// registers both, but Postgres 18 (Neon, docs/decisions.md D-54 cutover)
+// only registers the canonical form, so the bare alias 500s there
+// (`collation "hy-AM" for encoding "UTF8" does not exist`) while working
+// locally the whole time — found only after the Neon cutover made this
+// query run against Postgres 18 for the first time.
 export async function findStudentsForClass(classId: string) {
   const { rows } = await pool.query<{ id: string; first_name: string; last_name: string; status: string }>(
     `select s.id, s.first_name, s.last_name, e.status
        from enrollment e
        join student s on s.id = e.student_id
       where e.class_id = $1
-      order by (e.status = 'active') desc, s.last_name collate "hy-AM", s.first_name collate "hy-AM"`,
+      order by (e.status = 'active') desc, s.last_name collate "hy-AM-x-icu", s.first_name collate "hy-AM-x-icu"`,
     [classId],
   );
   return rows;

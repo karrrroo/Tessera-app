@@ -47,6 +47,20 @@
   --qr-bloom-2: #0B3FC9;
   --qr-bloom-3: #062A8A;
 
+  /* Iter's own inverse-bloom fill (brief §11bis, roadmap Phase 11) — violet,
+     deliberately never the same hue family as the QR bloom above (IT-3:
+     size and hue both carry the distinction between the two buttons). Also
+     a one-off spec'd gradient, not a general-purpose token. --iter-fg is
+     the fixed white the mark/icon renders in on top of it, same reasoning
+     as --danger-fg/--ok-fg above. --iter-mid is the thinking pill's third
+     conic-gradient stop (brief §11bis "Thinking pill"; --qr-bloom-1 and
+     --iter-bloom-1 are its first/fourth). */
+  --iter-bloom-1: #6B45E0;
+  --iter-bloom-2: #4B2FA8;
+  --iter-bloom-3: #2A1B52;
+  --iter-mid: #1E8FE0;
+  --iter-fg: #ffffff;
+
   /* TesseraQR's own card + modules (roadmap Phase 6, ID-5/ID-6) — fixed
      regardless of theme, on purpose. The design prototype binds the QR
      module color to var(--ink), which is correct-looking in light theme but

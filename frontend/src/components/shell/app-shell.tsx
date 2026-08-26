@@ -10,6 +10,8 @@ import { PillNav } from "./pill-nav";
 import { PhoneFrame } from "./phone-frame";
 import { OfflineBanner } from "./offline-banner";
 import { sidebarItemsForRole, mobileTabsForRole } from "./nav-items";
+import { IterButton } from "../iter/iter-button";
+import { IterPanel } from "../iter/iter-panel";
 
 const SIDEBAR_DEFAULT_OPEN_MIN_WIDTH = 1024;
 
@@ -35,6 +37,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="relative h-full overflow-y-auto bg-base">
         {children}
         <PillNav items={tabs} role={role} />
+        <IterButton variant="mobile" style={{ position: "absolute", right: 16, bottom: 116, zIndex: 70 }} />
+        <IterPanel />
       </div>
     );
     return (
@@ -65,6 +69,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         {children}
       </div>
+      <IterButton variant="desktop" style={{ position: "fixed", right: 28, bottom: 28, zIndex: 70 }} />
+      <IterPanel />
     </>
   );
 }

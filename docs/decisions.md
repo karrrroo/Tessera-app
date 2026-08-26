@@ -695,3 +695,69 @@ build; presumably seeded by the user directly against the Neon project. Per D-3'
 closing line, C2's full "never alter, never drop" discipline is now in effect for real,
 since this database is the one `DATABASE_URL` actually points at.
 
+**D-55. The gradebook's own Armenian-collation query (Phase 8, `findStudentsForClass`)
+500'd against Neon the first time it actually ran there — the only real functional
+casualty the cutover surfaced.** Postgres 17 (local dev) registers an ICU collation under
+both its short alias (`"hy-AM"`) and its canonical name (`"hy-AM-x-icu"`); Postgres 18
+(Neon's version) only registers the canonical form, so the bare alias this code used
+raised `collation "hy-AM" for encoding "UTF8" does not exist` — silently, since the shared
+error handler's `isPgError` branch (any object with a `.code` property, not necessarily a
+real Postgres error) mapped it to a generic `INTERNAL` with no logging at all, which is
+why finding it took adding a temporary file-based dump rather than reading a log line.
+Fixed two things: the query now collates against `"hy-AM-x-icu"` (confirmed present under
+that exact name on both Postgres 17 and 18 by querying `pg_collation` directly on each),
+and the `isPgError` branch now logs whenever it falls through to the generic `INTERNAL`
+code, so a future unmapped Postgres error is visible without repeating this exercise.
+
+## 2026-08-26 — Phase 11 (Iter), built early
+
+**D-56. Iter is built now, in full — entry point, panel, real generated replies — well
+ahead of its place in the roadmap's own phase order (Phase 11 of 14; this build has only
+reached Phase 8), at the user's explicit direction after being shown the roadmap's own
+stated reason for stopping short of a real model connection.** Phase 11 as written ships
+the interface with `reply` always `null` and a client-side "not connected yet" line,
+specifically because IT-11/S-14 flag an unresolved legal question — Iter reads the
+academic records of minors, and where the model runs, what leaves the country, and
+whether the provider retains prompts were never settled. The user was shown this exact
+reasoning and chose to connect Google's Gemini API anyway; this entry records that the
+override was deliberate and informed, not an oversight. The two design decisions the
+roadmap left open specifically because of this — message retention and model choice — are
+resolved by D-57 and this note, respectively; the underlying legal question itself (data
+residency, cross-border transfer, provider retention terms for a minors' data platform) is
+a business/legal decision this build cannot resolve on its own and was not asked to.
+
+**D-57. No `iter_message` table, and no server-side message storage of any kind — chat
+history lives in the browser (IndexedDB), replayed to the model on every request instead
+of being read back from a database.** Given the choice between adding the schema the
+roadmap's own design assumed (breaking this build's unbroken no-schema-changes record) and
+keeping every message server-side-stateless, the user chose the latter, specifically
+because it sidesteps both problems D-56 raises at once: no schema change, and no server-side
+retention question for data about minors that this build has no authority to answer. The
+backend endpoint (`POST /api/iter/messages`) takes the full prior conversation as part of
+the request and returns only a reply — nothing is written to Postgres.
+
+**D-58. Iter answers from the caller's own real data, fetched through the existing
+read-only services (`record.getRecord` for a student, `gradebook.getTeacherClasses` for a
+teacher), not from a generic knowledge-free prompt.** The roadmap's own disclaimer copy
+("Iter reads only your own record") is a real constraint here, not decoration: the service
+never accepts a different student's or teacher's id, and a failure to fetch context
+degrades to answering without it rather than failing the request — a student asking "which
+subject am I falling behind in" gets a real, grounded average-and-trend answer, not a
+generic non-answer. Admin gets no equivalent context fetch (no admin-facing read service
+existed to reuse, and the design source defines no admin suggestion chips either); its
+three suggestion chips are authored fresh, scoped to questions answerable from general
+knowledge of the product rather than live data.
+
+**D-59. Two real bugs surfaced by testing Iter itself, both fixed.** The floating launcher
+button stayed mounted (and above, via z-index) while its own panel was open, so on desktop
+— where the panel is a right-anchored sheet, not a full-screen overlay — the button sat
+inside the panel and intercepted clicks on the composer's send button; fixed by hiding the
+launcher whenever the panel is open, the standard pattern for this class of widget. The
+Postgres-error-swallowing gap D-55 already describes was found *through* this testing, not
+during it, but is recorded there rather than twice.
+
+**D-60. The model is `gemini-3.6-flash`, not `gemini-2.5-flash`.** The latter returned a
+`404` from Google's API stating it is "no longer available to new users," naming
+`gemini-3.6-flash` as its replacement — a straightforward consequence of building against
+a model catalog that moves faster than any fixed reference, not a design decision.
+

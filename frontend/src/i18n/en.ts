@@ -155,6 +155,35 @@ const dict = {
     "marks": "marks",
     "empty": "No export yet"
   },
+  "iter": {
+    "name": "Iter",
+    "sub": "Tessera assistant",
+    "hi": "Hi, ",
+    "line2": "What shall we look at today",
+    "empty": "Ask about your record",
+    "ph": "Type your question",
+    "open": "Iter",
+    "close": "Close",
+    "send": "Send",
+    "thinking": "Iter is thinking…",
+    "disclaimer": "Iter sees only your own data. It cannot change anything or message anyone for you.",
+    "error": "Something went wrong. Please try again.",
+    "sChips": [
+      "Which subject am I falling behind in",
+      "Show this semester's trend",
+      "What do I need for the diploma"
+    ],
+    "tChips": [
+      "Which students are missing a mark",
+      "Summarise my class's semester",
+      "Which requests await a decision"
+    ],
+    "aChips": [
+      "What can you help me with",
+      "How do I add a new class",
+      "Where do I review credential requests"
+    ]
+  },
   "scr": {
     "ov": {
       "kicker": "Student · Class 11-B · 2025–2026 school year",

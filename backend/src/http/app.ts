@@ -7,6 +7,7 @@ import { adminRouter } from "../modules/admin/routes.js";
 import { identityRouter } from "../modules/identity/routes.js";
 import { recordRouter } from "../modules/record/routes.js";
 import { gradebookRouter } from "../modules/gradebook/routes.js";
+import { iterRouter } from "../modules/iter/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
 import { asyncHandler } from "./async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "./errors.js";
@@ -57,6 +58,8 @@ export function createApp() {
   // /api/teacher/classes, /api/gradebook, /api/assessments,
   // /api/marks[...] (roadmap Phase 8).
   app.use("/api", gradebookRouter);
+  // /api/iter/messages (roadmap Phase 11, built early — see docs/decisions.md).
+  app.use("/api", iterRouter);
 
   app.get(
     "/api/me",
