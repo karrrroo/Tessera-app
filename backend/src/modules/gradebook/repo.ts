@@ -94,7 +94,10 @@ export async function findAssessmentsForGradebook(classId: string, subjectId: st
     })
     .from(assessment)
     .where(and(eq(assessment.classId, classId), eq(assessment.subjectId, subjectId), eq(assessment.termId, termId)))
-    .orderBy(assessment.heldOn);
+    // heldOn alone ties for same-day assessments — Postgres gives no order
+    // guarantee across ties, so two lessons entered the same day could
+    // visibly swap columns between loads without a secondary key.
+    .orderBy(assessment.heldOn, assessment.createdAt);
 }
 
 export async function findMarksForGradebook(classId: string, subjectId: string, termId: string) {

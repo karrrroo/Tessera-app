@@ -568,3 +568,114 @@ name) already verified live on the overview mosaic and subject list/detail scree
 is a real gap in *live coverage*, not in code review, and is recorded rather than quietly
 assumed away.
 
+## 2026-08-26 — Phase 8
+
+**D-44. Idempotent publish stores its key and result inside the existing `audit_log.after`
+JSONB column, queried by `->>'idempotencyKey'`, rather than a dedicated idempotency table or
+column.** C2 forbids schema changes for this build; `audit_log` already records every publish
+as a JSONB blob, so the idempotency key rides along in the same row instead of adding new
+storage for it. A repeat request with the same key returns the cached blob reshaped to the
+exact same `{publishedCount, publishedAt, batchId}` shape a fresh publish returns — the first
+implementation leaked the blob's extra fields (`termId`, `classId`, `subjectId`,
+`idempotencyKey` itself) on the cache-hit path only, caught by a direct `curl` repeat-request
+comparison, not by reading the code.
+
+**D-45. A correction's two writes — demote the old row, insert the new one — run in that
+order, demote first, even though the roadmap's own prose describes inserting first.** The
+roadmap's stated reason for the ordering ("the partial unique index would reject two current
+marks if the old row were demoted second") only holds if Postgres checks a non-deferred
+unique index at the end of each statement, not the end of the transaction — which is exactly
+what it does. Insert-then-demote would transiently hold two `state in ('draft','published')`
+rows for the same `(assessment_id, student_id)` and the index would reject the insert
+outright; demote-then-insert never does. Implemented by reasoning through Postgres's
+constraint-checking semantics directly, not by trusting the roadmap's example ordering at
+face value, with the reasoning recorded in the code itself.
+
+**D-46. `MARK_REASON_REQUIRED` needed its own error code, not zod's generic
+`VALIDATION_FAILED`, so the schema's `reason` field is plain `z.string()` and the empty/
+whitespace check moved to the service layer.** A `.trim().min(1)` on the zod schema rejects
+an empty reason before the service ever runs, which is correct for a form field but wrong for
+a named error code a client is meant to branch on. The three-layer pattern already used
+elsewhere in this build — client-side disable, application-layer specific code, database
+check-constraint backstop — applies here too: the dialog's submit button is disabled with no
+reason (client), the service throws `MARK_REASON_REQUIRED` on an empty/whitespace reason
+after `.trim()` (application), and the mark table's own check constraint is the backstop.
+
+**D-47. `getMarkHistory` originally let any teacher view any mark's history by id, with no
+ownership check at all** — found on a second read of the code, not by testing, since the
+symptom (a stranger's mark id returning real data) isn't something a demo walkthrough
+surfaces. Fixed by resolving the mark's owning assessment and running the same
+`requireAssignment` ownership check every other teacher-facing gradebook route already runs,
+after the id-to-assessment chain resolves rather than before, since the chain itself is what
+identifies which class/subject/year to check against.
+
+**D-48. Post-login and post-first-login redirects were role-blind — both hardcoded
+`/overview`, a student-only screen, regardless of the signed-in account's actual role.** A
+teacher or admin landing there got a silent `403` on `/api/me/record` with no `.catch()`,
+which could leave the page blank indefinitely if they didn't navigate away manually,
+violating this build's own no-bare-spinner principle. Found incidentally while diagnosing an
+unrelated Playwright screenshot during this phase's own testing, not by reviewing Phase 3.
+Fixed with one small helper, `landingRouteForRole()` (`/gradebook` for teacher, `/admin` for
+admin, `/overview` for student — each role's own first sidebar item), used at both call
+sites, since the two roles' nav items don't overlap at all and neither has a shared "default"
+screen to fall back to.
+
+**D-49. `MarkCell`'s `React.memo` comparator omitted the cell's own position, so a cell whose
+column index shifted without any of its other visible props changing kept rendering with a
+stale `pos` — stale `data-col`, and a stale `onKeyDown` closure bound to the wrong column.**
+Column index is not fixed: a newly added assessment can sort before existing ones (same-day
+ties, resolved by D-51 below), which shifts every later column's index by one without
+touching that cell's value, draft/published state, history flag, or focus state — the exact
+set the comparator checked. `React.memo` then correctly concluded "nothing relevant changed"
+and skipped the re-render that would have updated the closure. Found only by instrumenting a
+live page and reading actual `data-col` attributes and button `outerHTML` after adding a
+column, not by reading the component in isolation — the bug is invisible until two same-day
+columns actually exist. Fixed by adding `pos.row`/`pos.col` to the comparator.
+
+**D-50. The grid's internal `focused` state and the DOM's real keyboard focus could
+diverge entirely — `move()` only ever updated React state (driving the outline and
+`tabIndex`), and nothing called `.focus()` on the newly-focused cell's actual DOM node.**
+The visual highlight moved correctly on every keystroke; the browser's real
+`document.activeElement` did not, silently staying on whatever cell was first clicked. Every
+subsequent keystroke was handled by that original cell's own `onKeyDown` closure — the
+keyboard state machine's entire premise (GB-8, "the part that decides adoption") was
+non-functional beyond the very first commit-and-move. Confirmed directly: a scripted click on
+`(0,0)` followed by `"5"` moved the CSS outline to `(1,0)` but left
+`document.activeElement` reporting `(0,0)`. Fixed by calling `el.focus({preventScroll:
+true})` in the same effect that already runs `scrollIntoView` on focus change, guarded so it
+never re-focuses an element that already has focus.
+
+**D-51. `findAssessmentsForGradebook` sorted by `heldOn` alone, which gives Postgres no
+tie-break for two assessments on the same day** — observed directly: the exact same query,
+run moments apart with no data change in between, returned a same-day pair in a different
+relative order each time. A teacher who enters two lessons on one real calendar day would see
+those columns swap position between page loads for no reason a user could explain. Fixed by
+adding `assessment.createdAt` as a second sort key, so same-day ties resolve to creation
+order and stay there.
+
+**D-52. Publishing or superseding a mark left the grid showing the pre-publish/pre-correction
+value indefinitely, in the same browser session that entered the original draft.**
+`displayValue` always prefers a local draft-store entry over the server's own mark value, and
+nothing cleared that local entry once the server value it shadowed became stale — `flush()`
+only clears *rejected* entries, and the initial per-class load effect is the only place that
+ever called `reconcileDraftGroup`. `onPublish` and the supersede `onSubmit` handler each
+refetch the gradebook afterward but never reconciled the draft store against that fresh
+response, so the just-published or just-corrected cell kept showing the old number until the
+teacher navigated away and back. Fixed by calling `reconcileDraftGroup(groupKey, g.marks)`
+right after both of those refetches, exactly as the initial load already does.
+
+**D-53. GB-12's mobile gradebook — a genuine per-student list with a bottom sheet, not the
+desktop grid narrowed and left to scroll — is built as its own pair of components
+(`MobileStudentList`, `StudentMarksSheet`) below the `tablet` (768px) breakpoint, sharing
+every draft/commit/publish/history callback the desktop `GradebookGrid` uses.** The
+interactive design prototype (`Tessera.dc.html`) only ever renders one continuous grid at a
+narrower `gbMinW` with a shared floating keypad overlay, not a literal list-plus-sheet
+structure — but both the roadmap and the PRD state GB-12 explicitly and identically ("below
+768px the grid becomes a per-student list; tapping opens their marks as a bottom sheet"), and
+the `T` dictionary already carries `scr.gb.listHint` ("tap the student to edit their marks")
+and `scr.gb.close`, copy with no other use anywhere in the app — strong evidence the written
+spec, not the prototype's simplified interactivity, is the intended target here. Editing
+inside the sheet uses the same tap-picker pattern `SupersedeDialog` already established
+(GB-9: the tap picker is primary on mobile) rather than the keyboard state machine, which
+assumes a physical keyboard the mobile layout cannot.
+

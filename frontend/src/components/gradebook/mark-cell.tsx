@@ -74,6 +74,8 @@ export const MarkCell = memo(
     );
   },
   (prev, next) =>
+    prev.pos.row === next.pos.row &&
+    prev.pos.col === next.pos.col &&
     prev.value === next.value &&
     prev.pendingValue === next.pendingValue &&
     prev.isDraft === next.isDraft &&

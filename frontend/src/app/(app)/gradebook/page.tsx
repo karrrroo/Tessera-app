@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/locale-provider";
 import { ClassPills } from "@/components/gradebook/class-pills";
 import { GradebookGrid } from "@/components/gradebook/gradebook-grid";
+import { MobileStudentList } from "@/components/gradebook/mobile-student-list";
+import { StudentMarksSheet } from "@/components/gradebook/student-marks-sheet";
 import { PublishDialog } from "@/components/gradebook/publish-dialog";
 import { PublishSweep } from "@/components/gradebook/publish-sweep";
 import { SupersedeDialog } from "@/components/gradebook/supersede-dialog";
@@ -33,6 +35,7 @@ export default function GradebookPage() {
   const [version, setVersion] = useState(0);
   const [newColumnId, setNewColumnId] = useState<string | null>(null);
   const [historyMarkId, setHistoryMarkId] = useState<string | null>(null);
+  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
   const [supersedeTarget, setSupersedeTarget] = useState<{ markId: string; value: number } | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [sweepKey, setSweepKey] = useState(0);
@@ -188,7 +191,9 @@ export default function GradebookPage() {
     setPublishOpen(false);
     setSweepKey((k) => k + 1);
     const g = await gradebookApi.getGradebook(active.classId, active.subjectId, termParam ?? active.termId ?? "");
+    if (groupKey) reconcileDraftGroup(groupKey, g.marks);
     setGradebook(g);
+    setVersion((v) => v + 1);
     setClasses((prev) => prev?.map((c) => (c.classId === active.classId && c.subjectId === active.subjectId ? { ...c, draftCount: 0 } : c)) ?? null);
   }
 
@@ -228,20 +233,35 @@ export default function GradebookPage() {
               </button>
             </div>
           ) : (
-            <GradebookGrid
-              students={gradebook.students}
-              assessments={gradebook.assessments}
-              marksByCell={marksByCell}
-              displayValue={displayValue}
-              onCommit={onCommit}
-              onOpenHistory={setHistoryMarkId}
-              onRequestCorrection={(markId, value) => setSupersedeTarget({ markId, value })}
-              onAddColumn={onAddColumn}
-              onExit={onExitGrid}
-              studentLabel={t.scr.gb.student}
-              addColumnLabel={t.scr.gb.addCol}
-              avgLabel={t.scr.gb.avgShort}
-            />
+            <>
+              <div className="hidden tablet:block">
+                <GradebookGrid
+                  students={gradebook.students}
+                  assessments={gradebook.assessments}
+                  marksByCell={marksByCell}
+                  displayValue={displayValue}
+                  onCommit={onCommit}
+                  onOpenHistory={setHistoryMarkId}
+                  onRequestCorrection={(markId, value) => setSupersedeTarget({ markId, value })}
+                  onAddColumn={onAddColumn}
+                  onExit={onExitGrid}
+                  studentLabel={t.scr.gb.student}
+                  addColumnLabel={t.scr.gb.addCol}
+                  avgLabel={t.scr.gb.avgShort}
+                />
+              </div>
+              <div className="tablet:hidden">
+                <MobileStudentList
+                  students={gradebook.students}
+                  assessments={gradebook.assessments}
+                  marksByCell={marksByCell}
+                  displayValue={displayValue}
+                  onOpenStudent={setOpenStudentId}
+                  listHint={t.scr.gb.listHint}
+                  avgLabel={t.scr.gb.avgShort}
+                />
+              </div>
+            </>
           )}
 
           {draftCount > 0 && (
@@ -277,12 +297,36 @@ export default function GradebookPage() {
             setSupersedeTarget(null);
             if (active) {
               const g = await gradebookApi.getGradebook(active.classId, active.subjectId, termParam ?? active.termId ?? "");
+              if (groupKey) reconcileDraftGroup(groupKey, g.marks);
               setGradebook(g);
+              setVersion((v) => v + 1);
             }
           }}
         />
       )}
       {historyMarkId && <CellHistorySheet markId={historyMarkId} onClose={() => setHistoryMarkId(null)} />}
+      {openStudentId &&
+        gradebook &&
+        (() => {
+          const student = gradebook.students.find((s) => s.id === openStudentId);
+          if (!student) return null;
+          return (
+            <StudentMarksSheet
+              student={student}
+              assessments={gradebook.assessments}
+              marksByCell={marksByCell}
+              displayValue={displayValue}
+              onCommit={onCommit}
+              onOpenHistory={setHistoryMarkId}
+              onRequestCorrection={(markId, value) => setSupersedeTarget({ markId, value })}
+              onAddColumn={onAddColumn}
+              onExit={onExitGrid}
+              onClose={() => setOpenStudentId(null)}
+              addColumnLabel={t.scr.gb.addCol}
+              closeLabel={t.scr.gb.close}
+            />
+          );
+        })()}
     </main>
   );
 }
