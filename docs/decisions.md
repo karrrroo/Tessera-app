@@ -834,3 +834,44 @@ are pinned to a fixed white (`--iter-fg`, already defined for the launcher butto
 rather than the theme's `--ink`, because the brief is explicit they render "all in white"
 regardless of theme — a saturated bloom needs a fixed-contrast label, not a theme-following one.
 
+## 2026-08-26 — Phase 9 (Export)
+
+**D-70. Institution-wide export took over 60 seconds against Neon, failing the roadmap's
+own "under 10 seconds" requirement.** The first implementation fetched every unit's data
+(roster, assessments, marks) with fully sequential `await`s, one round-trip at a time,
+against a remote database — and re-fetched the same class's roster once per subject it
+teaches, instead of once per class. Fixed with a bounded-concurrency worker pool
+(`lib/concurrency.ts`'s `mapWithConcurrency`, capped at 8, below the DB pool's max of 10)
+around both the mark-counting step and the per-unit data-loading step, plus a `Map`-based
+roster cache keyed by class id so a class shared by several subjects only fetches its
+roster once. Brought a real institution-wide export from ~60s to 7.15s (xlsx) and 5.4s
+(csv/zip) — measured directly against Neon, not estimated.
+
+**D-71. `@types/archiver@8.0.0` doesn't match the installed `archiver@5.3.2` runtime.**
+The v8 types describe a class-based API the v5 runtime doesn't have, producing a
+"no default export" type error on an import that works fine at runtime. Pinned
+`@types/archiver` to `5.3.4` instead — a reminder that this package's major version numbers
+don't track the runtime package's own majors.
+
+**D-72. No natural `EXPORT_NO_PUBLISHED_MARKS` scenario exists in the seed data.** Queried
+the seed directly, twice — once for an assigned class/subject/term with no published marks,
+once for a class/subject with no teaching assignment at all — and both come back empty
+everywhere; the seed is fully dense. Rather than destructively editing real seed data to
+manufacture a test case, this path is code-reviewed but not empirically exercised, the same
+gap and the same reasoning as Phase 7's D-43.
+
+**D-73. Export filenames carry Armenian text, which plain ASCII `Content-Disposition`
+headers can't.** Sent both forms per RFC 5987 — an ASCII-transliterated `filename=` for
+old clients, and the real UTF-8 name (percent-encoded) as `filename*=UTF-8''...` for
+everything else — rather than transliterating everywhere, which would make every
+downloaded file's name unreadable in its own language. The transliteration table
+(`lib/transliterate.ts`) exists solely to feed that ASCII fallback.
+
+**D-74. The download button can't use a plain `<a href>`.** The access token lives only in
+memory (no cookie a plain navigation would send), so a bare link to `/api/export` would hit
+an unauthenticated route. Instead the button calls the export endpoint through the app's own
+`apiFetch` (reusing its existing 401-retry-on-refresh logic), reads the real filename back
+out of the response's `Content-Disposition` header, turns the response body into a
+`Blob`/`createObjectURL`, and clicks a throwaway anchor programmatically — the standard
+pattern for an authenticated file download in an SPA.
+

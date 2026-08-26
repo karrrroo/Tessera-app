@@ -4,9 +4,11 @@ import { useAuth } from "@/state/auth-provider";
 import { useT } from "@/i18n/locale-provider";
 import { SessionList } from "@/components/auth/session-list";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
+import { ExportPanel } from "@/components/export/export-panel";
+import { ExportLogTable } from "@/components/export/export-log-table";
 
 export default function SettingsPage() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const t = useT();
 
   return (
@@ -31,6 +33,9 @@ export default function SettingsPage() {
         </h3>
         <SessionList />
       </div>
+
+      <ExportPanel />
+      {user?.role === "admin" && <ExportLogTable />}
 
       <button
         onClick={() => logout()}

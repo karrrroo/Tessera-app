@@ -11,6 +11,7 @@ import { PublishDialog } from "@/components/gradebook/publish-dialog";
 import { PublishSweep } from "@/components/gradebook/publish-sweep";
 import { SupersedeDialog } from "@/components/gradebook/supersede-dialog";
 import { CellHistorySheet } from "@/components/gradebook/cell-history-sheet";
+import { ExportButton } from "@/components/export/export-button";
 import {
   cellKey,
   clearDraft,
@@ -210,9 +211,7 @@ export default function GradebookPage() {
           active={active}
           onSelect={(c) => router.push(`/gradebook?class=${c.classId}&subject=${c.subjectId}&term=${c.termId}`)}
         />
-        <span title={t.scr.gb.exportBtn} className="flex-none rounded-full border px-3.5 py-2 text-xs" style={{ borderColor: "var(--hair)", color: "var(--ink-2)" }}>
-          {t.scr.gb.exportBtn}
-        </span>
+        {active && <ExportButton classId={active.classId} subjectId={active.subjectId} termId={termParam ?? active.termId ?? ""} />}
       </div>
       <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
         {t.scr.gb.hint}
