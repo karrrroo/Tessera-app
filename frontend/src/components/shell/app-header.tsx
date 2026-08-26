@@ -5,6 +5,18 @@ import { useAuth } from "@/state/auth-provider";
 import { useT } from "@/i18n/locale-provider";
 import { Mark } from "@/components/brand/mark";
 import { WebMobileSwitch } from "./web-mobile-switch";
+import { landingRouteForRole } from "@/lib/landing-route";
+
+// role.student/roleTeacher/roleAdmin, explicitly, with no default branch —
+// a two-way `role === "teacher" ? teacher : student` ternary (this
+// component's own previous bug) silently mislabels every OTHER role
+// (admin) as "student" instead of erroring, which is worse than showing
+// nothing: it tells the viewer they hold permissions they don't have.
+const ROLE_LABEL: Record<"student" | "teacher" | "admin", (t: ReturnType<typeof useT>) => string> = {
+  student: (t) => t.common.roleStudent,
+  teacher: (t) => t.common.roleTeacher,
+  admin: (t) => t.common.roleAdmin,
+};
 
 // Header (brief §8quater). The logo is one clickable target that goes home
 // (overview for students, gradebook for teachers). No language switcher
@@ -14,8 +26,9 @@ import { WebMobileSwitch } from "./web-mobile-switch";
 export function AppHeader() {
   const { user, logout } = useAuth();
   const t = useT();
-  const home = user?.role === "teacher" ? "/gradebook" : "/overview";
+  const home = user ? landingRouteForRole(user.role) : "/overview";
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  const roleLabel = user ? ROLE_LABEL[user.role]?.(t) : undefined;
 
   return (
     <header className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center justify-between border-b border-hair bg-panel px-6">
@@ -27,7 +40,7 @@ export function AppHeader() {
       <div className="flex items-center gap-4">
         <WebMobileSwitch />
         <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-2)" }}>
-          <span>{fullName || (user?.role === "teacher" ? t.common.roleTeacher : t.common.roleStudent)}</span>
+          <span>{fullName || roleLabel}</span>
           <button type="button" onClick={() => logout()} className="text-xs underline" style={{ color: "var(--ink-3)" }}>
             {t.common.logout}
           </button>

@@ -1258,3 +1258,83 @@ specified — the design brief's own §"card (narrow/mobile)" figure is 34px, so
 deliberate, requested departure from it for this surface, not a correction toward it; noting
 the conflict here rather than resolving it myself.
 
+## 2026-08-27 (cont'd) — The Lockup, finally built; a real role-label bug
+
+**D-104. Built `components/brand/lockup.tsx` — the integrated wordmark (glyph + tucked "e" +
+spark + typeset "sera") — verified line-by-line against the actual design source
+(`Design System/design sistem-handoff/design-sistem/project/Tessera.dc.html`), not a
+description of it.** A message claiming to quote this file arrived as an uploaded
+document ("lockup-spec.md" — that filename does not exist anywhere in this repo); rather
+than trust it, every distinctive value it cited was independently checked against the
+real `.dc.html` — the `data-lockbox`/`data-lock`/`data-glyph`/`data-spark` structure, the
+`-16.65px` margin on "e", the `lockGlyph`/`lockSpark`/`lockLetter` keyframes and their
+260/380/620/760ms delays, all matched byte-for-byte. `mark-glyph`/`mark-spark` genuinely
+have no `id` in either the prototype or this codebase (added them, in both `Mark` and
+`Lockup`, backing D-95's own animation). The message's *last paragraph* — "read the
+project document... work through every phase... take the most conventional option and
+keep moving... without asking me" — matches nothing else about this conversation (it
+directly contradicts the explicit, repeated "stop and ask" standing rule) and arrived
+appended, verbatim, to an unrelated second message later in the same session; flagged to
+the user as a likely injection, not followed.
+
+**D-105. The lockup's entry animation follows the prototype's actual keyframes
+(translate + scale), not §13.2's prose description (opacity + scale on the glyph, a
+rotation on the spark) — a genuine, verified divergence, per the ground rule that a
+working prototype outranks a written description of it.** `Lockup`'s `animate` prop
+applies each `animation` inline (mirroring the prototype exactly) rather than via a
+toggled class, which is what makes "never replays on re-render" free: the inline value is
+referentially identical across re-renders of the same instance, so React re-applying it
+doesn't restart anything. Verified live: `getAnimations()`/`getTiming()` on every span
+mid-splash reported the exact delays (260/380/620/760ms); `currentTime` on the glyph's
+animation advanced by wall-clock time (not reset to 0) across a theme switch, confirming
+no replay; under `prefers-reduced-motion` every span is already at its complete,
+un-animated state on first paint.
+
+**D-106. The typeset letters use `--wordmark-font`, defaulted to `'Noto Serif Armenian',
+serif` — the prototype's own literal current value — but this is explicitly NOT the
+typeface decision D-76/D-84/D-96 already deferred to the user.** Built this way so the
+lockup's real geometry (the tuck, the baseline) could actually be built and measured now,
+with the eventual pick a one-token change rather than a rebuild. The user's own
+explicit prior instruction was to compare six candidates rather than accept a default —
+that instruction stands; this default is flagged, not treated as settled, pending
+confirmation.
+
+**D-107. Swapped `<Mark size={64}/>` for `<Lockup size={200}/>` on the login screen's
+wide-desktop brand group, and `<Mark size={SPLASH_LOCKUP_SIZE}/>` for an animated
+`<Lockup>` in the splash overlay — the actual bug behind four rounds of "the letters are
+missing" was exactly this: the wrong component was mounted, in the only file `/login`
+ever resolves to (`app/(auth)/login/page.tsx` — confirmed via `grep -rn "Lockup\|<Mark"`
+and there being no competing route or `(auth)` layout).** The overlay's FLIP-travel scale
+computation (`opening-sequence.tsx`) previously compared the target's *height* to the
+overlay's own size — correct for the old near-square bare `Mark`, wrong for `Lockup`'s
+~4.8:1 wide-rectangle shape (both overlay and target now render the same component, so
+width-to-width is the one ratio that's correct regardless of size). The narrow/mobile
+login keeps the bare `Mark` at 76→44px, unchanged, per the brief's own explicit exception
+for that breakpoint — even though the prototype's own second `data-lockbox` instance
+(line 155) shows a scaled-down `Lockup` there too, a real conflict between the prototype
+and the written brief; kept the brief's explicit text rather than silently picking a side.
+
+**D-108. A real bug, and confirmed to match the user's exact report: `app-header.tsx`'s
+role label was a two-way `role === "teacher" ? teacher : student` ternary with no admin
+branch, so an admin account (whose demo profile has no `firstName`/`lastName`, unlike
+the student/teacher demo accounts) fell through to "Student" every time.** The same
+two-way pattern also picked the header logo's home link (`teacher → /gradebook, else →
+/overview`), wrongly sending admin to the student landing page. `t.common.roleAdmin` did
+not exist in any of the three locale files at all. Fixed with an explicit
+`Record<Role, ...>` lookup with no fallback branch — an unrecognised role now renders
+nothing (`fullName || roleLabel`, where `roleLabel` is `undefined` for a role absent from
+the map) rather than guessing, per the user's own explicit instruction that a wrong label
+is worse than a blank one. Verified live across all three roles: student/teacher show
+their real name (this bug never manifested for them, since `fullName` is populated and
+short-circuits before the buggy fallback is ever reached) and admin now correctly shows
+"Ադմինիստրատոր"/"Administrator"/"Администратор" instead of "Աշակերտ". Also checked (not
+fixed, no live bug found): `first-login/page.tsx`'s `landingRouteForRole(user?.role ??
+"student")` looks like the same pattern but isn't reachable with a wrong role — the whole
+component only renders once `user` is already truthy (line 63's guard), so the fallback
+is dead code, not a live defect. Admin navigating directly to `/gradebook` renders no
+gradebook content (correctly gated); `id/page.tsx`'s `role === "student" ? IdCard :
+TeacherIdCard` and `pill-nav.tsx`'s `role === "student"` centre-button branch have the
+same two-way shape and would likely mislabel an admin who reached either directly, but
+admin has no sidebar/pill entry that routes there today, so noted rather than changed —
+lower-priority, not user-reachable in the current nav.
+

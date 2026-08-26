@@ -33,6 +33,7 @@ const dict = {
   "common": {
     "roleStudent": "Student",
     "roleTeacher": "Teacher",
+    "roleAdmin": "Administrator",
     "logout": "Sign out",
     "web": "Web",
     "mobile": "Mobile",
@@ -248,7 +249,9 @@ const dict = {
       "sub": "Submit documents from competitions, courses or volunteering to earn academic credit. Requests are reviewed by the subject teacher or the deputy head of studies.",
       "newTitle": "New request",
       "cat": "Category",
+      "subject": "Subject",
       "name": "Title",
+      "desc": "Description",
       "namePh": "e.g. National olympiad, physics",
       "doc": "Supporting document",
       "pick": "Choose a file or drop it here",

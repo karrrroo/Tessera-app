@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Mark } from "@/components/brand/mark";
+import { Lockup } from "@/components/brand/lockup";
 
 // The opening sequence (corrections-5 §3, "Splash, then the login opens"):
 // a full-screen splash (0-1100ms), then a transition (1100-1900ms) in which
@@ -103,7 +103,13 @@ export function OpeningOverlay({
     const targetCenterY = targetRect.top + targetRect.height / 2;
     const viewportCenterX = window.innerWidth / 2;
     const viewportCenterY = window.innerHeight / 2;
-    const scale = targetRect.height / SPLASH_LOCKUP_SIZE;
+    // Width-to-width, not height-to-height: the old bare-Mark overlay was
+    // near-square, so height and width scaled almost identically and either
+    // worked. Lockup is a wide rectangle (~4.8:1) — its width is the stable
+    // reference (both the overlay and every target render the same
+    // component, just at a different `size`), so this is the one ratio
+    // that's correct regardless of which target/breakpoint it lands on.
+    const scale = targetRect.width / SPLASH_LOCKUP_SIZE;
     inner.style.transition = "transform 700ms cubic-bezier(.2,.8,.2,1)";
     inner.style.transform = `translate(${targetCenterX - viewportCenterX}px, ${targetCenterY - viewportCenterY}px) scale(${scale})`;
   }, [phase, targetRefs]);
@@ -123,48 +129,20 @@ export function OpeningOverlay({
         pointerEvents: "none",
       }}
     >
-      <div
-        ref={innerRef}
-        className={phase === "splash" ? "tessera-mark-entry" : undefined}
-        style={{ color: "var(--ink)", transform: "scale(1)" }}
-      >
-        <Mark size={SPLASH_LOCKUP_SIZE} />
+      <div ref={innerRef} style={{ color: "var(--ink)", transform: "scale(1)" }}>
+        {/* Brief §13.2, "the identity moment" — Tessera.dc.html's own
+            keyframes (lockGlyph/lockSpark/lockLetter, see tessera.css):
+            the glyph slides in, the spark follows 120ms later, then the
+            typeset letters fade in. `animate` is unconditional (not tied to
+            `phase`) deliberately: this component only ever mounts at all
+            during "splash"/"transition" (the guard above returns null
+            otherwise), and the animations (up to 1260ms) outlast the
+            1100ms splash phase — tying `animate` to `phase === "splash"`
+            would flip it false the instant "transition" begins and cut
+            every animation off mid-flight, snapping each span to its base
+            state instead of letting it finish. */}
+        <Lockup size={SPLASH_LOCKUP_SIZE} animate />
       </div>
-      {/* Brief §13.2, "the identity moment": the two paths animate
-          separately, not the mark as one fading/scaling unit — the glyph
-          settles first, then the spark springs in 180ms later. This is the
-          splash's entire entry effect (there is no additional wrapper-level
-          fade); runs once per mount, which OpeningOverlay already guarantees
-          by only ever mounting this className during the splash phase. */}
-      <style>{`
-        @keyframes tessera-mark-glyph-in {
-          from { opacity: 0; transform: scale(.88); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes tessera-mark-spark-in {
-          from { opacity: 0; transform: scale(.4) rotate(-14deg); }
-          to { opacity: 1; transform: scale(1) rotate(0deg); }
-        }
-        .tessera-mark-entry #mark-glyph {
-          transform-box: fill-box;
-          transform-origin: center;
-          opacity: 0;
-          animation: tessera-mark-glyph-in var(--t-entry) var(--ease-out) both;
-        }
-        .tessera-mark-entry #mark-spark {
-          transform-box: fill-box;
-          transform-origin: center;
-          opacity: 0;
-          animation: tessera-mark-spark-in 340ms var(--ease-spring) 180ms both;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .tessera-mark-entry #mark-glyph, .tessera-mark-entry #mark-spark {
-            animation: none;
-            opacity: 1;
-            transform: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }

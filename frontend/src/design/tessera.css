@@ -32,6 +32,16 @@
      sequence.tsx). */
   --t-entry: 420ms;
 
+  /* The lockup's typeset letters ("e", "sera") — components/brand/lockup.tsx.
+     This is the working prototype's (Tessera.dc.html) own literal current
+     value, used so the lockup's geometry/animation can actually be built and
+     measured — it is NOT a final decision. The wordmark typeface is still an
+     open choice (see docs/decisions.md, the essera-typeface-trials
+     comparison); this token exists specifically so picking a different
+     candidate later is a one-line change here, not a hunt through the
+     component. */
+  --wordmark-font: "Noto Serif Armenian", serif;
+
   /* The login sign-in button, and only it — deliberately not --accent/
      --accent-fg, so pointing this at the accent colour later is a one-line
      change to these two tokens rather than a hunt through the component.
@@ -259,6 +269,41 @@
    rendered as a flat block (worst under dark theme, where --bg-raised is
    dark) instead of showing the mesh through it. Removed entirely; nothing
    currently depends on it (see docs/decisions.md). */
+
+/* Lockup entry animation (components/brand/lockup.tsx), copied from
+   Tessera.dc.html's own keyframes/timings — this genuinely differs from
+   §13.2's WRITTEN description (opacity+scale on the glyph, scale+rotate on
+   the spark): the prototype instead translates the glyph in from the right
+   and translates+scales the spark, then fades the typeset letters in after.
+   The prototype is the design source's own working implementation, so it
+   wins over the brief's prose description of it (see docs/decisions.md for
+   this divergence). Lockup applies each `animation` inline per span, exactly
+   like the prototype, gated by its own `animate` prop — never via a class
+   toggled across renders, which is what actually guarantees this never
+   replays on an unrelated re-render: the inline value is referentially the
+   same string across renders of the same instance, so React re-applying it
+   does not restart the animation. `animate=false` (Lockup's default, used
+   everywhere outside login/splash) omits these properties entirely; the
+   rule below is the reduced-motion override for the `animate=true` case. */
+@keyframes lockGlyph {
+  from { transform: translateX(97px); }
+  to { transform: translateX(0); }
+}
+@keyframes lockSpark {
+  from { transform: translate(39px, 19px) scale(0.516); }
+  to { transform: translate(0, 0) scale(1); }
+}
+@keyframes lockLetter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-lock="1"] > span {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
 
 /* The 600ms theme/background/accent cross-fade (roadmap Phase 4 Done-when
    #12) — applied to the frame element, disabled under reduced motion. */

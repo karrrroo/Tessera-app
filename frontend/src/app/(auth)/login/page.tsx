@@ -14,6 +14,7 @@ import { GradientMesh } from "@/components/design/gradient-mesh";
 import { Glass } from "@/components/design/glass";
 import { GlassLayered } from "@/components/design/glass-layered";
 import { Mark } from "@/components/brand/mark";
+import { Lockup } from "@/components/brand/lockup";
 import { landingRouteForRole } from "@/lib/landing-route";
 import { OpeningOverlay, useOpeningSequence } from "@/components/auth/opening-sequence";
 
@@ -165,8 +166,15 @@ export default function LoginPage() {
 
       <div className="relative hidden h-full desktop:grid" style={{ gridTemplateColumns: "1fr 1fr", placeItems: "center", zIndex: 10 }}>
         <div className="flex flex-col items-center gap-4 px-10 text-center" style={cardStyle}>
+          {/* Lockup, not the bare Mark — the wide login column is one of
+              the two contexts (with the splash) that shows the full
+              wordmark, per Tessera.dc.html's own 200px lockbox and the
+              merged brief §2/§3.2. `animate` stays false: the splash
+              overlay already runs the entry animation once and hands off
+              to this (already-settled) element the instant it's revealed —
+              animating a second time here would replay it. */}
           <div ref={desktopMarkRef} style={{ color: "var(--ink)", opacity: markRevealed ? 1 : 0 }}>
-            <Mark size={64} />
+            <Lockup size={200} />
           </div>
           <p className="max-w-sm text-sm" style={{ color: "var(--ink-2)" }}>
             {t.auth.tagline}
