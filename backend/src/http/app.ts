@@ -6,6 +6,7 @@ import { authRouter } from "../modules/auth/routes.js";
 import { adminRouter } from "../modules/admin/routes.js";
 import { identityRouter } from "../modules/identity/routes.js";
 import { recordRouter } from "../modules/record/routes.js";
+import { gradebookRouter } from "../modules/gradebook/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
 import { asyncHandler } from "./async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "./errors.js";
@@ -53,6 +54,9 @@ export function createApp() {
   // /api/me/record, /api/me/subjects/:id, /api/me/archive,
   // /api/me/marks/:id/history (roadmap Phase 7).
   app.use("/api/me", recordRouter);
+  // /api/teacher/classes, /api/gradebook, /api/assessments,
+  // /api/marks[...] (roadmap Phase 8).
+  app.use("/api", gradebookRouter);
 
   app.get(
     "/api/me",

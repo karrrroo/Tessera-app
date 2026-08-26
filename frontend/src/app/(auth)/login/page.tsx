@@ -13,6 +13,7 @@ import { WebMobileSwitch } from "@/components/shell/web-mobile-switch";
 import { GradientMesh } from "@/components/design/gradient-mesh";
 import { Glass } from "@/components/design/glass";
 import { Mark } from "@/components/brand/mark";
+import { landingRouteForRole } from "@/lib/landing-route";
 
 function errorMessage(err: unknown, t: ReturnType<typeof useLocale>["t"]): string {
   if (err instanceof ApiRequestError) {
@@ -29,7 +30,7 @@ function errorMessage(err: unknown, t: ReturnType<typeof useLocale>["t"]): strin
 
 export default function LoginPage() {
   const { t } = useLocale();
-  const { login, status } = useAuth();
+  const { login, status, user } = useAuth();
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -38,8 +39,8 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (status === "authed") router.replace("/overview");
-  }, [status, router]);
+    if (status === "authed" && user) router.replace(landingRouteForRole(user.role));
+  }, [status, user, router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

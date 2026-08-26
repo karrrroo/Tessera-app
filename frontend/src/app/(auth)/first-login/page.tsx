@@ -9,6 +9,7 @@ import { PasswordField } from "@/components/auth/password-field";
 import { PasswordChecklist } from "@/components/auth/password-checklist";
 import { GradientMesh } from "@/components/design/gradient-mesh";
 import { Glass } from "@/components/design/glass";
+import { landingRouteForRole } from "@/lib/landing-route";
 
 export default function FirstLoginPage() {
   const { t } = useLocale();
@@ -22,7 +23,7 @@ export default function FirstLoginPage() {
 
   useEffect(() => {
     if (status === "anon") router.replace("/login");
-    else if (status === "authed" && user && !user.mustChangePassword) router.replace("/overview");
+    else if (status === "authed" && user && !user.mustChangePassword) router.replace(landingRouteForRole(user.role));
   }, [status, user, router]);
 
   async function submit(e: React.FormEvent) {
@@ -36,7 +37,7 @@ export default function FirstLoginPage() {
     try {
       await apiJson("/api/auth/password/change", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) });
       await refreshUser();
-      router.push("/overview");
+      router.push(landingRouteForRole(user?.role ?? "student"));
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === "AUTH_CURRENT_PASSWORD_INVALID") {
         setError(t.auth.errCreds);
