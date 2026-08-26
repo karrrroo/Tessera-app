@@ -240,19 +240,15 @@
   }
 }
 
-/* Login card (brief §8bis): glass over the mesh below 900px; at 900px+ the
-   right column is flat --bg-raised with no glass and no gradient at all —
-   Tailwind utilities can't out-specificity .glass-panel's own properties, so
-   this un-sets them explicitly instead of trying to override each one. */
-@media (min-width: 900px) {
-  .login-card {
-    background: var(--bg-raised);
-    border: none;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
+/* This rule dates to the pre-D-87 two-column login (a flat --bg-raised right
+   panel at 900px+, no glass) and was never removed when D-87 rebuilt the
+   desktop login as one continuous mesh with a real glass card. Left in
+   place, it forced .login-card's own background to an OPAQUE --bg-raised at
+   every desktop width — sitting directly behind GlassLayered's blur layer,
+   so the blur had nothing but that opaque fill to read, and the card
+   rendered as a flat block (worst under dark theme, where --bg-raised is
+   dark) instead of showing the mesh through it. Removed entirely; nothing
+   currently depends on it (see docs/decisions.md). */
 
 /* The 600ms theme/background/accent cross-fade (roadmap Phase 4 Done-when
    #12) — applied to the frame element, disabled under reduced motion. */

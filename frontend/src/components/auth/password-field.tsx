@@ -17,7 +17,16 @@ export function PasswordField({
   return (
     <label className="block space-y-1">
       <span className="text-sm text-ink-2">{label}</span>
-      <div className="flex items-center rounded-[18px] border border-hair bg-glass px-1 focus-within:border-hair-bright">
+      {/* rgba(255,255,255,.06) + its own blur, not `bg-glass` — on the auth
+          screens this sits directly on the mesh/glass card (D-87), where
+          `--glass`'s theme-conditional opacity (up to .72 in light theme) is
+          opaque enough to read as a flat fill with no backdrop-filter of its
+          own; a fixed, low, always-translucent value is what actually shows
+          the card's own texture through the input rather than covering it. */}
+      <div
+        className="flex items-center rounded-[18px] border border-hair px-1 focus-within:border-hair-bright"
+        style={{ background: "rgba(255,255,255,.06)", backdropFilter: "blur(22px) saturate(160%)", WebkitBackdropFilter: "blur(22px) saturate(160%)" }}
+      >
         <input
           type={revealed ? "text" : "password"}
           value={value}

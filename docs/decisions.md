@@ -1177,3 +1177,50 @@ published for exactly this decision (the `essera-typeface-trials` artifact, D-84
 in this pass changes that — asked the user directly whether a candidate has already been
 picked from it rather than silently choosing one to satisfy this request.
 
+## 2026-08-27 (cont'd) — Group A: login/chrome bugs
+
+**D-97. A real bug, and the actual cause of the dark-theme "black box" login card: a
+stale `@media (min-width: 900px) { .login-card {...} }` rule in `tessera.css`, dating
+to the pre-D-87 two-column login, was never removed when D-87 rebuilt the desktop login
+as one continuous mesh with a real glass card.** It forced `.login-card`'s own background
+to an opaque `--bg-raised` at every desktop width, sitting directly behind `GlassLayered`'s
+blur layer — a `backdrop-filter` can only blur what's actually behind it, and an opaque
+fill directly behind the blur layer is all it had to read, so the card rendered as a flat
+block regardless of theme. Worse under dark theme purely because `--bg-raised` is dark
+there; light theme's version happened to look plausibly card-like by coincidence, which is
+why the report was theme-specific even though the rule itself wasn't. Deleted the rule
+entirely — nothing in the current single-surface architecture depends on it. Also gave the
+identifier input and `PasswordField` their own `rgba(255,255,255,.06)` fill + the same
+`blur(22px) saturate(160%)`, replacing `bg-glass` (whose light-theme value, up to 72%
+opaque, was already dense enough to read as a flat fill with no blur of its own) — scoped
+to these two auth-only components, not the shared `--glass` token, since most of the rest
+of the app's `bg-glass` usage sits on flat panels where a theme-conditional opacity is the
+right choice. Verified visually in both themes: the mesh's own hues are now plainly visible
+and blurred through both the card and its inputs.
+
+**D-98. Checked, not reproducible: the Iter thinking pill's conic-gradient ring.** The
+`@property --iter-angle` + keyframe technique (D-67-area work) is a valid, modern way to
+animate a conic-gradient's rotation without JS, and it does — triggered a real `send()` and
+sampled `getComputedStyle(pill, "::before").getPropertyValue("--iter-angle")` six times
+over ~1.8s: 0° → 24° → 84° → 159° → 222° → 282°, consistent with the specified 2s linear
+rotation, with `animationPlayState: "running"` throughout. No change made.
+
+**D-99. A real bug: on mobile, the nav pill and Iter button scrolled with the page
+instead of staying pinned.** `AppShell`'s mobile branch nested `PillNav`/`IterButton`
+(both `position: absolute`) inside the *same* `overflow-y-auto` div as `{children}` — an
+absolutely-positioned element is still a descendant of whichever ancestor actually scrolls,
+and rides along with that ancestor's scroll offset regardless of its own position; nothing
+about `position: absolute` exempts it from an ancestor's own scrolling. Fixed by giving the
+outer shell `overflow: hidden` (matching brief §8bis: the frame never scrolls) and moving
+only `{children}` into a new inner `overflow-y-auto` div, with the chrome elements as
+siblings of that div rather than descendants of it. Verified: the Iter button's own
+`getBoundingClientRect()` was byte-for-byte identical whether the inner content was
+scrolled to 400px or back to 0.
+
+**D-100. Re-verified, not re-fixed: items A2 (Lockup, still blocked — see D-96), A3 (the
+glyph/spark entry animation), A4 (the language pill), and A7 (the SSR locale hydration
+fix) were resent unchanged from the previous round.** No file touching any of these
+regressed since the prior commit (`51dc4f4`) — re-ran the same measurements (equal pill
+segments in all three locales, zero hydration console warnings, the two-path animation's
+`animationName`s present) rather than re-doing already-verified work.
+

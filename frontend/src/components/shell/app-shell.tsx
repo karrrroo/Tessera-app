@@ -33,9 +33,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (mode === "mobile") {
     const tabs = mobileTabsForRole(role, t);
+    // Brief §8bis: the frame is position:relative/overflow:hidden and ONLY
+    // the content region scrolls — chrome (PillNav, the Iter button) must
+    // be a sibling of that scrolling region, not a descendant of it. An
+    // absolutely-positioned element is still a descendant of whichever
+    // ancestor actually scrolls; it rides along with that ancestor's
+    // scroll offset regardless of its own position, which is why nesting
+    // the chrome inside the same overflow-y-auto div as {children} made it
+    // rise with the page.
     const content = (
-      <div className="relative h-full overflow-y-auto bg-base">
-        {children}
+      <div className="relative h-full overflow-hidden bg-base">
+        <div className="h-full overflow-y-auto">{children}</div>
         <PillNav items={tabs} role={role} />
         <IterButton variant="mobile" style={{ position: "absolute", right: 16, bottom: 116, zIndex: 70 }} />
         <IterPanel />
