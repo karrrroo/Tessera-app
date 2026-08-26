@@ -27,6 +27,10 @@
   --t-quick: 200ms;
   --t-theme: 600ms;
   --t-press: 120ms;
+  /* Brief §12 timing table: "the mark on login" — the glyph/spark entry
+     stagger's own duration for the glyph half (components/auth/opening-
+     sequence.tsx). */
+  --t-entry: 420ms;
 
   /* --accent-tint never resolves to pure black/white (brief §8) — this is
      black's own fallback tint (steel), not a derived value. AccentProvider

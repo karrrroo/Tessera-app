@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { cookies, headers } from "next/headers";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/state/auth-provider";
 import { LocaleProvider } from "@/i18n/locale-provider";
+import { isLocale, parseAcceptLanguage, resolveLocaleFromLanguages } from "@/i18n/resolve-locale";
 import { ThemeProvider } from "@/state/theme-provider";
 import { BackgroundProvider } from "@/state/background-provider";
 import { AccentProvider } from "@/state/accent-provider";
@@ -28,7 +30,24 @@ export const metadata: Metadata = {
   description: "Tessera — academic records and student ID",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// The one place a locale is resolved for the very first paint — a Server
+// Component can read the `tessera.locale` cookie (set client-side by
+// LocaleProvider whenever the user changes it) but never localStorage, so
+// this cookie is the only thing that can make the server's own HTML already
+// agree with what the client is about to render. Falling back to
+// Accept-Language here (not to navigator.languages, which doesn't exist on
+// the server) mirrors the exact same default-hy/en/ru rule the client used
+// to apply on its own — see resolve-locale.ts.
+async function resolveInitialLocale() {
+  const cookieStore = await cookies();
+  const stored = cookieStore.get("tessera.locale")?.value;
+  if (isLocale(stored)) return stored;
+  const acceptLanguage = (await headers()).get("accept-language");
+  return resolveLocaleFromLanguages(parseAcceptLanguage(acceptLanguage));
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const initialLocale = await resolveInitialLocale();
   return (
     <html
       lang="en"
@@ -39,7 +58,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <BackgroundProvider>
             <AccentProvider>
-              <LocaleProvider>
+              <LocaleProvider initialLocale={initialLocale}>
                 <OnlineProvider>
                   <LayoutModeProvider>
                     <AuthProvider>{children}</AuthProvider>

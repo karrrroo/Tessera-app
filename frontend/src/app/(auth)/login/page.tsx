@@ -172,7 +172,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <GlassLayered radius={34} className="login-card w-full max-w-[360px] space-y-6 p-8" style={cardStyle}>
+        {/* solid=false: the login card is the one surface this project's own
+            follow-up dropped layer 1 from entirely — against the light mesh
+            specifically, even the small blur-reachable corner accent still
+            read as a residual dark smudge. Every other GlassLayered surface
+            (the nav pill, sheets, modals) keeps layer 1 as specified. */}
+        <GlassLayered radius={34} solid={false} className="login-card w-full max-w-[360px] space-y-6 p-8" style={cardStyle}>
           {cardBody}
         </GlassLayered>
       </div>

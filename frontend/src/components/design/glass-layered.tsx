@@ -15,11 +15,20 @@ export function GlassLayered({
   radius = 26,
   className,
   style,
+  solid = true,
 }: {
   children?: ReactNode;
   radius?: number;
   className?: string;
   style?: CSSProperties;
+  /** Layer 1 (the fixed dark object). Default on, matching "tessera-v2-FINAL
+   * (3).md" §5.3 everywhere this component is used — except the login card,
+   * which drops it entirely (a deliberate override, not every surface's
+   * default; see docs/decisions.md). Even at a small, blur-reachable size,
+   * any dark object at all read as a residual smudge against a light mesh
+   * background specifically; other surfaces (the nav pill, sheets, modals)
+   * sit on darker/more varied content where it doesn't have that problem. */
+  solid?: boolean;
 }) {
   return (
     // overflow:hidden here is load-bearing, not decoration: it's what makes
@@ -36,7 +45,7 @@ export function GlassLayered({
           a couple of blur radii in both dimensions, so blur genuinely
           reaches all of it — and it never occupies enough of the card for
           the real mesh (behind everywhere else) to read as a minority. */}
-      <div aria-hidden className="absolute left-0 top-0" style={{ width: 56, height: 56, background: "var(--glass-layer-base)" }} />
+      {solid && <div aria-hidden className="absolute left-0 top-0" style={{ width: 56, height: 56, background: "var(--glass-layer-base)" }} />}
       {/* Layer 2: the frosted panel, covering the whole card. Over layer 1's
           corner this softens that fill; everywhere else, its blur is
           reading the real mesh behind the whole page — background stays

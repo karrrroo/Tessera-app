@@ -125,21 +125,44 @@ export function OpeningOverlay({
     >
       <div
         ref={innerRef}
-        className={phase === "splash" ? "tessera-splash-lockup-in" : undefined}
+        className={phase === "splash" ? "tessera-mark-entry" : undefined}
         style={{ color: "var(--ink)", transform: "scale(1)" }}
       >
         <Mark size={SPLASH_LOCKUP_SIZE} />
       </div>
+      {/* Brief §13.2, "the identity moment": the two paths animate
+          separately, not the mark as one fading/scaling unit — the glyph
+          settles first, then the spark springs in 180ms later. This is the
+          splash's entire entry effect (there is no additional wrapper-level
+          fade); runs once per mount, which OpeningOverlay already guarantees
+          by only ever mounting this className during the splash phase. */}
       <style>{`
-        @keyframes tessera-splash-lockup-in {
-          from { opacity: 0; transform: scale(.94); }
+        @keyframes tessera-mark-glyph-in {
+          from { opacity: 0; transform: scale(.88); }
           to { opacity: 1; transform: scale(1); }
         }
-        .tessera-splash-lockup-in {
-          animation: tessera-splash-lockup-in 500ms cubic-bezier(.2,.8,.2,1) 200ms both;
+        @keyframes tessera-mark-spark-in {
+          from { opacity: 0; transform: scale(.4) rotate(-14deg); }
+          to { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        .tessera-mark-entry #mark-glyph {
+          transform-box: fill-box;
+          transform-origin: center;
+          opacity: 0;
+          animation: tessera-mark-glyph-in var(--t-entry) var(--ease-out) both;
+        }
+        .tessera-mark-entry #mark-spark {
+          transform-box: fill-box;
+          transform-origin: center;
+          opacity: 0;
+          animation: tessera-mark-spark-in 340ms var(--ease-spring) 180ms both;
         }
         @media (prefers-reduced-motion: reduce) {
-          .tessera-splash-lockup-in { animation: none; opacity: 1; }
+          .tessera-mark-entry #mark-glyph, .tessera-mark-entry #mark-spark {
+            animation: none;
+            opacity: 1;
+            transform: none;
+          }
         }
       `}</style>
     </div>

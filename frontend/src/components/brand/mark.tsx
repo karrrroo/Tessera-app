@@ -44,8 +44,8 @@ export function Mark({ size = 28, part = "both", label = "Tessera", className }:
       style={{ display: "inline-flex", width, height, flex: "none", color: "inherit", lineHeight: 0 }}
     >
       <svg width="100%" height="100%" viewBox={BOX[resolvedPart]} fill="currentColor" role="img" aria-label={ariaLabel}>
-        {showGlyph && <path d={GLYPH_PATH} />}
-        {showSpark && <path d={SPARK_PATH} />}
+        {showGlyph && <path id="mark-glyph" d={GLYPH_PATH} />}
+        {showSpark && <path id="mark-spark" d={SPARK_PATH} />}
       </svg>
     </span>
   );

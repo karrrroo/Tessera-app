@@ -1091,3 +1091,89 @@ signal ahead of the hy default, not a replacement for it, and an explicit stored
 locale override (falls through to whatever the browser's own default reports), `en-US`
 (picks `en`), and a non-matching `fr-FR` (falls back to `hy`).
 
+**D-91. `GlassLayered` gained a `solid` prop, and the login card is the one caller that
+sets it `false`.** The three-layer glass technique's layer 1 (D-88) is a small, fixed-size
+corner accent specifically so a 22px blur can genuinely soften it — but against the light
+end of the login's own mesh specifically, even that small accent still read as a residual
+dark smudge, an explicit user override of D-88's own default for this one surface. Every
+other `GlassLayered` caller (the pill nav, sheets, modals) keeps layer 1 — the login card's
+mesh backdrop is the one place light enough for a dark corner fill to be visible at all.
+
+**D-92. The language pill's sliding thumb rebuilt on CSS Grid + a `left`-percentage
+track, replacing an earlier flex/`transform: translateX(%)` version.** Two independent
+robustness fixes to the same component, verified together: (1) `grid-template-columns:
+repeat(3, 1fr)` with `min-width: 0` on each button guarantees three equal segments
+regardless of label width — flex items only end up equal when their content widths
+already happen to match; (2) the thumb positions itself with `left: calc(...)` (a
+percentage of the *track*, its own containing block) rather than `transform:
+translateX(%)` (which resolves against the *translated element's own* width — a different,
+and for a one-third-wide segment, drifting, quantity per step). Verified via
+`getBoundingClientRect()` across all three locales: equal segment widths and a
+zero-drift thumb in each.
+
+## 2026-08-27 — Four more login-screen findings
+
+**D-93. A real bug: the login screen could hydration-mismatch on locale.** `LocaleProvider`
+resolved its very first client-side render from `localStorage`/`navigator.languages` — a
+computation the server has no access to at all, so whenever a visitor's stored locale
+differed from whatever the server had no choice but to guess, React's hydration pass
+compared two genuinely different trees. Fixed by moving locale resolution to the server:
+`resolve-locale.ts` now holds the shared hy/en/ru + Accept-Language rule (previously
+duplicated only in the client), `layout.tsx` (now `async`) reads a `tessera.locale` cookie
+via `next/headers`' `cookies()`, falling back to the `accept-language` header via
+`headers()`, and passes the result into `LocaleProvider` as `initialLocale` — the client's
+first render now starts from the exact value the server already committed to HTML, so
+there is nothing left to disagree on. `setLocale`/`syncLocaleFromServer` now write the same
+value to both `localStorage` and this cookie. A one-time post-hydration effect migrates a
+pre-existing `localStorage` locale that predates the cookie (or that survived with cookies
+blocked) — safe specifically because it runs in `useEffect`, after hydration has already
+completed. Verified with five Playwright contexts, including the adversarial one that used
+to actually mismatch (`tessera.locale` cookie = `ru`, browser Accept-Language = `en-US`):
+zero console hydration warnings/errors in any of them, and `document.documentElement.lang`
+correctly followed the cookie over Accept-Language in that case.
+
+**D-94. The claimed "language pill collapses in HY" was not reproducible — checked, not
+assumed.** DevTools' own computed-style check (as instructed) shows the pill's rendered
+font is genuinely `"JetBrains Mono"` in every locale (it loads via `next/font/google` in
+`layout.tsx`, resolved through Tailwind's `font-mono` per D-4's own tokens setup) — there is
+no locale-driven `font-family` rule anywhere in `tessera.css` or `globals.css` for the
+Armenian-font-inheritance theory to act through in the first place. Measured segment
+widths were identical (36px each) across hy/en/ru in five separate Playwright contexts.
+The pill did have one real, different latent risk, fixed regardless: it sits in a `flex
+justify-between` row next to the title/subtitle block, and without an explicit
+flex-shrink override a sufficiently wide sibling could still compress it below its own
+fixed width — added `shrink-0` to close that gap even though it wasn't observed to fire at
+1440px.
+
+**D-95. A real gap: the mark's own two-path entry animation (brief §13.2, "the identity
+moment") was never built — only a whole-element fade/scale existed.** The splash overlay's
+`Mark` previously used one `opacity`+`scale` transition on its outer wrapper
+(`.tessera-splash-lockup-in`); the brief specifies the glyph and the spark animate as two
+*separate* paths, the spark starting 180ms after the glyph, which is a materially
+different visual (the mark completing itself in a beat, not appearing as one piece).
+Added `id="mark-glyph"`/`id="mark-spark"` to `Mark`'s two `<path>` elements (present in the
+original design source per that file's own header comment, dropped when only the `d`
+values were carried over into the React component) and replaced the wrapper animation with
+`.tessera-mark-entry #mark-glyph`/`#mark-spark` rules matching the brief exactly: glyph
+`scale(.88)→scale(1)` + opacity, `--t-entry` (420ms, newly added to `tessera.css`'s timing
+tokens) with `--ease-out`; spark `scale(.4) rotate(-14deg)→scale(1) rotate(0)` + opacity,
+340ms `--ease-spring`, 180ms delay. `transform-box: fill-box` on both — SVG's default
+transform origin is the document's coordinate space, not the shape's own bounding box,
+which would have made the spark's rotation swing wildly around a point far outside itself.
+Scoped by the `.tessera-mark-entry` ancestor class (not a bare `#mark-glyph` rule) since
+`Mark` renders many times across the app and raw id selectors would reach every instance,
+not just the splash's. Verified live: mid-splash, both paths report their real animation
+names via `getComputedStyle`; under `prefers-reduced-motion`, the whole overlay never
+mounts and the real login mark is already at opacity 1 — "renders complete," not merely
+"animation skipped."
+
+**D-96. Task 1 (build `Lockup` at 200px for the login's brand group) is not done — it is
+the same blocked item D-76/D-84 already identified, not a new one.** The wide-login left
+group has shown the bare `Mark` glyph, not the integrated wordmark, because the real
+lockup (glyph + tucked "e" + spark + typeset second "s" + "era", per corrections-2/5)
+cannot be built without a chosen body typeface — and per corrections-2 §2 ("do not pick
+one yourself"), that choice is the user's. A six-candidate comparison was already built and
+published for exactly this decision (the `essera-typeface-trials` artifact, D-84); nothing
+in this pass changes that — asked the user directly whether a candidate has already been
+picked from it rather than silently choosing one to satisfy this request.
+

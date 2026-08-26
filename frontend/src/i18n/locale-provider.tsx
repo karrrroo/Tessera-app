@@ -1,14 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import hy from "./hy";
 import en from "./en";
 import ru from "./ru";
 import { getAccessToken } from "../lib/api/token-store";
 import { apiJson } from "../lib/api/client";
+import { isLocale, LOCALES, type Locale } from "./resolve-locale";
 
-export const LOCALES = ["hy", "en", "ru"] as const;
-export type Locale = (typeof LOCALES)[number];
+export { LOCALES };
+export type { Locale };
 
 // hy/en/ru each infer as their own literal string types (`as const`), which
 // don't structurally match each other — widen to plain `string` so all three
@@ -49,30 +50,27 @@ type LocaleContextValue = {
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "tessera.locale";
+// Same key, doubling as the cookie name — one conceptual "the user's chosen
+// locale" value, just persisted in two places so both the server (which can
+// only ever read a cookie, never localStorage) and the client have access
+// to it.
+const COOKIE_KEY = STORAGE_KEY;
 
-function isLocale(value: string | null): value is Locale {
-  return value === "hy" || value === "en" || value === "ru";
+function persistLocale(l: Locale) {
+  window.localStorage.setItem(STORAGE_KEY, l);
+  document.cookie = `${COOKIE_KEY}=${l}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
-// Armenian first: an explicit stored choice always wins; absent that,
-// Accept-Language picks between the three only when it actually matches en
-// or ru — anything else (Armenian, a third language, nothing at all)
-// defaults to hy, never falls through to whatever the browser's own default
-// happens to be.
-function readStoredLocale(): Locale {
-  if (typeof window === "undefined") return "hy";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (isLocale(stored)) return stored;
-  const preferred = navigator.languages ?? [navigator.language];
-  for (const lang of preferred) {
-    const base = lang.slice(0, 2).toLowerCase();
-    if (base === "en" || base === "ru") return base;
-  }
-  return "hy";
-}
-
-export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
+// initialLocale comes from the server (layout.tsx resolves it from the
+// `tessera.locale` cookie, falling back to Accept-Language, per
+// resolve-locale.ts) — using it directly as the very first client state,
+// rather than independently recomputing a locale client-side from
+// localStorage/navigator.languages, is what fixes the hydration mismatch:
+// the server-rendered HTML and the client's first render now start from the
+// exact same value instead of two computations that could disagree.
+export function LocaleProvider({ children, initialLocale }: { children: ReactNode; initialLocale: Locale }) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const migratedRef = useRef(false);
 
   // roadmap Phase 4 Done-when #12: document.documentElement.lang tracks the
   // active locale.
@@ -80,14 +78,32 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale;
   }, [locale]);
 
+  // One-time, post-hydration only: a visitor who chose a locale before this
+  // cookie mechanism existed (or whose cookies are blocked but whose
+  // localStorage isn't) has a real preference sitting in localStorage that
+  // the server-side cookie read couldn't see. Reconciling it here — after
+  // mount, not during the initial render — is a plain follow-up state
+  // update like the rest of the app's post-mount reveals; it cannot cause a
+  // hydration mismatch because hydration has already completed by the time
+  // this effect runs.
+  useEffect(() => {
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (isLocale(stored) && stored !== initialLocale) {
+      setLocaleState(stored);
+      persistLocale(stored);
+    }
+  }, [initialLocale]);
+
   const syncLocaleFromServer = useCallback((l: Locale) => {
     setLocaleState(l);
-    window.localStorage.setItem(STORAGE_KEY, l);
+    persistLocale(l);
   }, []);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    window.localStorage.setItem(STORAGE_KEY, l);
+    persistLocale(l);
     if (getAccessToken()) {
       apiJson("/api/me/preferences", { method: "PATCH", body: JSON.stringify({ locale: l }) }).catch(() => {
         // Best-effort — the UI has already switched language; a failed sync
