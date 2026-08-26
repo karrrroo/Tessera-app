@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { NavItem } from "./nav-items";
 import { NavIcon } from "./nav-icon";
+import { GlassLayered } from "@/components/design/glass-layered";
 
 // Floating pill bottom nav with a docked centre button (brief §9 — the
 // section revised most across the design-brief chain; see
@@ -41,11 +42,13 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
 
   return (
     <div className="pointer-events-none absolute inset-x-4 bottom-[calc(14px+env(safe-area-inset-bottom))]">
-      <div className="glass-panel pointer-events-auto flex h-[58px] items-center" style={{ borderRadius: 999, display: "grid", gridTemplateColumns: "1fr 78px 1fr" }}>
-        {renderGroup(left)}
-        <div />
-        {renderGroup(right)}
-      </div>
+      <GlassLayered radius={999} className="pointer-events-auto h-[58px]">
+        <div className="grid h-[58px] items-center" style={{ gridTemplateColumns: "1fr 78px 1fr" }}>
+          {renderGroup(left)}
+          <div />
+          {renderGroup(right)}
+        </div>
+      </GlassLayered>
       <button
         type="button"
         aria-label={role === "student" ? "Show QR" : "Add assessment"}

@@ -12,6 +12,7 @@ import { DemoRow } from "@/components/auth/demo-row";
 import { WebMobileSwitch } from "@/components/shell/web-mobile-switch";
 import { GradientMesh } from "@/components/design/gradient-mesh";
 import { Glass } from "@/components/design/glass";
+import { GlassLayered } from "@/components/design/glass-layered";
 import { Mark } from "@/components/brand/mark";
 import { landingRouteForRole } from "@/lib/landing-route";
 import { OpeningOverlay, useOpeningSequence } from "@/components/auth/opening-sequence";
@@ -111,21 +112,58 @@ export default function LoginPage() {
     transition: "opacity 400ms var(--ease-out), transform 400ms var(--ease-out)",
   };
 
+  // Shared between the mobile card and the desktop card — only the wrapper
+  // (a flat bg-raised Glass panel on mobile, the three-layer glass sitting
+  // directly on the continuous mesh on desktop) differs.
+  const cardBody = (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
+            {t.auth.title}
+          </h1>
+          <p className="mt-1 text-[13px]" style={{ color: "var(--ink-3)" }}>
+            {t.auth.sub}
+          </p>
+        </div>
+        <LanguagePill />
+      </div>
+
+      {form}
+
+      <p className="text-center text-[12.5px]" style={{ color: "var(--ink-3)" }}>
+        {t.auth.support}
+      </p>
+
+      <div
+        className="space-y-2 border-t border-hair pt-4"
+        style={{ opacity: demoVisible ? 1 : 0, transition: "opacity 300ms var(--ease-out)" }}
+      >
+        <DemoRow onError={setError} />
+      </div>
+    </>
+  );
+
   return (
-    <div className="relative flex min-h-screen flex-col bg-base desktop:flex-row" style={{ height: "100vh", overflow: "hidden" }}>
+    <div className="relative h-screen overflow-hidden bg-base">
       <OpeningOverlay phase={phase} targetRefs={markTargetRefs} />
 
       <div className="absolute right-4 top-4 z-20" style={cardStyle}>
         <WebMobileSwitch />
       </div>
 
-      {/* Web: left 52% full-bleed mesh + wordmark (brief §8bis); collapses below 900px.
-          v2.1 Fix 5: grid place-items:center, not flex with margins — flex-with-margins
-          is what pushed the lockup/tagline group off-centre and let overflow push
-          content above the viewport on short screens. */}
-      <div className="relative hidden flex-[52] overflow-hidden desktop:grid desktop:place-items-center">
+      {/* Desktop (≥900px): one continuous full-bleed mesh — not two columns
+          joined at a seam. This overrides the base brief's §8bis ("right 48%
+          — flat --bg-raised, no gradient, no glass") and corrections'
+          own Fix 4 column split; see docs/decisions.md. Nothing sits on its
+          own background here except the form's own glass card below — the
+          mesh IS the page, edge to edge, with nothing to point at as an edge. */}
+      <div className="absolute inset-0 hidden desktop:block" style={{ zIndex: 0 }}>
         <GradientMesh animateEntry={phase === "splash"} />
-        <div className="relative z-10 flex flex-col items-center gap-4 px-10 text-center" style={cardStyle}>
+      </div>
+
+      <div className="relative hidden h-full desktop:grid" style={{ gridTemplateColumns: "1fr 1fr", placeItems: "center", zIndex: 10 }}>
+        <div className="flex flex-col items-center gap-4 px-10 text-center" style={cardStyle}>
           <div ref={desktopMarkRef} style={{ color: "var(--ink)", opacity: markRevealed ? 1 : 0 }}>
             <Mark size={64} />
           </div>
@@ -133,58 +171,24 @@ export default function LoginPage() {
             {t.auth.tagline}
           </p>
         </div>
+
+        <GlassLayered radius={34} className="login-card w-full max-w-[360px] space-y-6 p-8" style={cardStyle}>
+          {cardBody}
+        </GlassLayered>
       </div>
 
-      {/* Web: right 48% flat surface, form centred; mobile: full-bleed mesh + glass card.
-          Same v2.1 Fix 5 rule applies here too — grid place-items:center, not flex. */}
-      <div className="relative grid flex-[48] place-items-center overflow-y-auto bg-raised p-8">
-        <div className="absolute inset-0 desktop:hidden">
-          <GradientMesh animateEntry={phase === "splash"} />
-        </div>
-        {/* Desktop-only mesh bleed across the 52/48 seam (my decision, overrides the
-            brief's flat-right-column-only reading): the flat --bg-raised base stays
-            underneath and the form's own column stays untinted — this is a soft wash
-            anchored at the seam that reaches transparent well before the form, so
-            there is no point where the colour visibly "ends." */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 hidden desktop:block"
-          style={{
-            width: 420,
-            opacity: "var(--mesh-opacity)",
-            background: "radial-gradient(ellipse 100% 90% at 0% 42%, var(--mesh-2) 0%, transparent 68%)",
-          }}
-        />
+      {/* Mobile (<900px): unchanged — full-bleed mesh behind one centred
+          glass card, its own separate mesh instance (a small viewport has no
+          "second column" to bleed into in the first place). */}
+      <div className="absolute inset-0 grid place-items-center overflow-y-auto p-8 desktop:hidden">
+        <GradientMesh animateEntry={phase === "splash"} />
         <Glass radius={34} className="login-card relative z-10 w-full max-w-[380px] space-y-6 p-8" style={cardStyle}>
-          <div className="space-y-1 text-center desktop:hidden">
+          <div className="space-y-1 text-center">
             <div ref={mobileMarkRef} className="mx-auto inline-block" style={{ opacity: markRevealed ? 1 : 0 }}>
               <Mark size={44} />
             </div>
           </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
-                {t.auth.title}
-              </h1>
-              <p className="mt-1 text-[13px]" style={{ color: "var(--ink-3)" }}>
-                {t.auth.sub}
-              </p>
-            </div>
-            <LanguagePill />
-          </div>
-
-          {form}
-
-          <p className="text-center text-[12.5px]" style={{ color: "var(--ink-3)" }}>
-            {t.auth.support}
-          </p>
-
-          <div
-            className="space-y-2 border-t border-hair pt-4"
-            style={{ opacity: demoVisible ? 1 : 0, transition: "opacity 300ms var(--ease-out)" }}
-          >
-            <DemoRow onError={setError} />
-          </div>
+          {cardBody}
         </Glass>
       </div>
     </div>

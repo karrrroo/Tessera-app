@@ -39,6 +39,13 @@
   --danger-fg: #ffffff;
   --ok-fg: #ffffff;
 
+  /* The three-layer glass technique's own layer-1 base ("tessera-v2-FINAL
+     (3).md" §5.3 — "a single translucent rectangle is a grey box, not
+     glass"): a fixed dark rect the frosted layer 2 sits over, independent of
+     theme (both the pill nav and the login card read as dark glass in both
+     themes, same reasoning as the ID card's own fixed palette). */
+  --glass-layer-base: #0D1017;
+
   /* The docked QR button's inverse-bloom fill (brief §9, final per
      corrections-4 §3.1) — a one-off spec'd gradient for this exact button,
      not a general-purpose token, but centralized here rather than inlined

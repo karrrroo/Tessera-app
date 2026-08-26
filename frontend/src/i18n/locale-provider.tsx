@@ -54,10 +54,21 @@ function isLocale(value: string | null): value is Locale {
   return value === "hy" || value === "en" || value === "ru";
 }
 
+// Armenian first: an explicit stored choice always wins; absent that,
+// Accept-Language picks between the three only when it actually matches en
+// or ru — anything else (Armenian, a third language, nothing at all)
+// defaults to hy, never falls through to whatever the browser's own default
+// happens to be.
 function readStoredLocale(): Locale {
   if (typeof window === "undefined") return "hy";
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return isLocale(stored) ? stored : "hy";
+  if (isLocale(stored)) return stored;
+  const preferred = navigator.languages ?? [navigator.language];
+  for (const lang of preferred) {
+    const base = lang.slice(0, 2).toLowerCase();
+    if (base === "en" || base === "ru") return base;
+  }
+  return "hy";
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {

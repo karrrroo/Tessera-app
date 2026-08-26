@@ -1039,3 +1039,55 @@ navigating. Verified live via a real browser session: sign-out lands on `/login`
 direct post-sign-out navigation to `/overview` also lands on `/login` (not `/first-login`),
 confirming the server-side session was actually revoked, not just cleared client-side.
 
+## 2026-08-26 — The login screen as one surface, not two columns
+
+**D-87. The login screen is now one continuous full-bleed surface, not a 52/48 split with
+a mesh bled across the join (user's explicit override).** Two prior attempts at softening
+the seam between the columns (a small radial patch, then a masked bleed layer) both still
+read as an edge, because each was a second, separately-authored gradient that had no reason
+to agree with whatever the *other*, independently-clipped mesh measured at its own cut
+point. The fix was architectural, not another blend: there is no right column and no left
+column anymore, only one `GradientMesh` spanning the full viewport behind everything, with
+two content groups (`display:grid;grid-template-columns:1fr 1fr;place-items:center`)
+positioned on top of it. This explicitly overrides `tessera-v2-FINAL (3).md` §8bis ("right
+48% — flat `--bg-raised`, no gradient, no glass") and the v2.1 corrections' own column
+split — the override is deliberate and instructed, not an oversight.
+
+**D-88. The form's surface is three-layer glass (`GlassLayered`), not a flat panel —
+because it now sits directly on a gradient rather than `--bg-raised`.** Extracted as a
+shared component (`components/design/glass-layered.tsx`) rather than inlined twice, since
+the pill nav (D-89) needs the identical technique. Two real construction mistakes were
+found and fixed along the way, both from measuring an actual screenshot, not reasoning
+about the CSS in the abstract:
+1. The frosted layer 2 was sized *larger* than layer 1 (a `-4px` inset) with no
+   `overflow:hidden` on the outer wrapper — the opposite of "nothing extends past the
+   container's radius." Fixed by making the outer wrapper the single source of clipping
+   (`overflow:hidden` + the card's own radius), so no inner layer's own sizing can ever
+   cause a visible protrusion, regardless of what that sizing is.
+2. Layer 1 (the solid `#0D1017` object) was first sized to whole large fractions of the
+   card (45%, then even bigger). A 22px backdrop-filter blur only softens what's within
+   roughly a blur-radius of an edge — a block that large has an interior nowhere near any
+   edge, which reads as flat opaque colour no matter how translucent layer 2 above it is.
+   Fixed by sizing it to a small, fixed-pixel corner accent (56×56px) — comfortably within
+   blur's actual reach in both dimensions — so the whole thing genuinely reads as
+   *softened*, and the real mesh, not this layer, is what's behind the rest of the card
+   for layer 2's blur to act on.
+
+**D-89. The mobile pill nav's glass rebuilt with the same `GlassLayered` component,
+replacing the single-div `.glass-panel` utility for this one instance.** `.glass-panel`
+approximates glass with `backdrop-filter` alone on one flat translucent div — correct
+enough where it's already used (settings sections, dialogs), but insufficient for a
+surface the brief specifically calls out ("a single translucent rectangle is a grey box,
+not glass") — the pill nav is exactly that call-out's target. Structure (the `1fr 78px
+1fr` grid, the docked QR button at 58px with its 5px background-coloured ring) is
+unchanged; only the background surface itself is now the three-layer technique.
+
+**D-90. Locale detection now checks `Accept-Language` (via `navigator.languages`) before
+falling back to Armenian, instead of defaulting to Armenian unconditionally whenever
+nothing is already stored.** Armenian still wins whenever nothing in the browser's
+language list resolves to `en` or `ru` specifically — this is an *additional* first-visit
+signal ahead of the hy default, not a replacement for it, and an explicit stored choice
+(`localStorage`) always wins over both. Verified with three real Playwright contexts: no
+locale override (falls through to whatever the browser's own default reports), `en-US`
+(picks `en`), and a non-matching `fr-FR` (falls back to `hy`).
+

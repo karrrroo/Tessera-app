@@ -184,7 +184,32 @@ icon-only `Mark`, not the complete glyph+spark+lettering wordmark, which still d
 exist as a component (D-76); and the desktop split layout's flat right panel is visible
 from the splash's first frame rather than arriving only at the transition, since "nothing
 else on it" assumes one full-screen surface and this app's desktop layout post-dates that
-assumption (D-77).
+assumption (D-77). **D-77's gap no longer applies** — see the fifth follow-up below, which
+removes the two-column split entirely.
+
+## A fifth follow-up: the login screen rebuilt as one surface (D-87 through D-90)
+
+The desktop login was a 52/48 column split with the mesh confined to the left column —
+two attempts at softening the seam between them (D-82, then a masked bleed layer) both
+still read as a visible edge, because each was a second gradient with no structural reason
+to agree with the other's cut edge. The real fix (user's explicit override of
+`tessera-v2-FINAL (3).md` §8bis and the v2.1 corrections' column split, D-87) removes the
+two columns outright: one `GradientMesh` spans the full viewport, with the lockup/tagline
+group and the form now simply two `place-items:center` cells of one grid laid over it.
+This obsoletes D-77's gap above (there is no longer a "right panel" for anything to arrive
+into) and D-82 (there is no longer a seam to bleed across).
+
+The form's own surface, sitting directly on a gradient now rather than `--bg-raised`,
+needed real glass — a new shared `GlassLayered` component (D-88) implementing the brief's
+three-layer technique (solid object, frosted panel, top-edge highlight) properly, after
+two construction mistakes (wrong-layer-larger-than-the-other with no clipping; a solid
+accent sized too large for its own blur to ever soften) were caught by screenshot and
+fixed. The mobile pill nav's `.glass-panel` single-div approximation was replaced with the
+same component for the same reason (D-89) — struture unchanged, only the surface itself.
+
+Separately, first-visit locale detection now consults `Accept-Language` before falling
+back to Armenian (D-90), rather than defaulting to Armenian regardless of the browser's
+own language.
 
 ## Notes for the next phase
 
