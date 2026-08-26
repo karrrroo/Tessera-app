@@ -168,6 +168,24 @@ dedicated `--lang-pill-fill` token (rather than reusing the general-purpose `--h
 which is a different opacity) and the missing hover, in `tessera.css` and
 `language-pill.tsx`.
 
+## A fourth follow-up: the splash→login opening sequence (D-75 through D-79)
+
+This phase's own notes deferred "the full splash→login motion handoff (brief §13.2)."
+`brief-chain/07-corrections-5` §3 specified it precisely — a 1100ms splash (full mesh +
+grain + centred lockup) followed by an 1100-1900ms transition in which the same lockup
+travels to its resting position on the login screen while the card and demo row fade in —
+and it has now been built (`components/auth/opening-sequence.tsx`), reusing the mesh entry
+bloom from corrections-3 §2.1 (`GradientMesh`'s new `animateEntry` prop). Two real bugs
+were found and fixed in building it: a React Strict Mode double-invoke that made the
+splash silently skip itself in dev (D-78), and an inline array literal that kept
+restarting the lockup's travel transition instead of letting it run once (D-79). Two gaps
+remain, both documented rather than worked around: the travelling "lockup" is the
+icon-only `Mark`, not the complete glyph+spark+lettering wordmark, which still doesn't
+exist as a component (D-76); and the desktop split layout's flat right panel is visible
+from the splash's first frame rather than arriving only at the transition, since "nothing
+else on it" assumes one full-screen surface and this app's desktop layout post-dates that
+assumption (D-77).
+
 ## Notes for the next phase
 
 - `components/shell/nav-items.ts`'s role→item mapping is explicitly provisional (D-19).

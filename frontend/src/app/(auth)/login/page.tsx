@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/state/auth-provider";
@@ -14,6 +14,7 @@ import { GradientMesh } from "@/components/design/gradient-mesh";
 import { Glass } from "@/components/design/glass";
 import { Mark } from "@/components/brand/mark";
 import { landingRouteForRole } from "@/lib/landing-route";
+import { OpeningOverlay, useOpeningSequence } from "@/components/auth/opening-sequence";
 
 function errorMessage(err: unknown, t: ReturnType<typeof useLocale>["t"]): string {
   if (err instanceof ApiRequestError) {
@@ -37,6 +38,16 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { phase, cardVisible, demoVisible } = useOpeningSequence();
+  const desktopMarkRef = useRef<HTMLDivElement>(null);
+  const mobileMarkRef = useRef<HTMLDivElement>(null);
+  // Stable array identity: OpeningOverlay's measurement effect depends on
+  // this array, and an inline literal here would get a new identity on
+  // every render (every cardVisible/demoVisible tick), re-triggering that
+  // effect and restarting its 700ms CSS transition each time instead of
+  // running it once when the transition phase begins.
+  const markTargetRefs = useMemo(() => [desktopMarkRef, mobileMarkRef], []);
+  const markRevealed = phase === "revealed";
 
   useEffect(() => {
     if (status === "authed" && user) router.replace(landingRouteForRole(user.role));
@@ -94,17 +105,27 @@ export default function LoginPage() {
     </form>
   );
 
+  const cardStyle: React.CSSProperties = {
+    opacity: cardVisible ? 1 : 0,
+    transform: cardVisible ? "translateY(0)" : "translateY(16px)",
+    transition: "opacity 400ms var(--ease-out), transform 400ms var(--ease-out)",
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col bg-base desktop:flex-row" style={{ height: "100vh", overflow: "hidden" }}>
-      <div className="absolute right-4 top-4 z-20">
+      <OpeningOverlay phase={phase} targetRefs={markTargetRefs} />
+
+      <div className="absolute right-4 top-4 z-20" style={cardStyle}>
         <WebMobileSwitch />
       </div>
 
       {/* Web: left 52% full-bleed mesh + wordmark (brief §8bis); collapses below 900px. */}
       <div className="relative hidden flex-[52] items-center justify-center overflow-hidden desktop:flex">
-        <GradientMesh />
-        <div className="relative z-10 flex flex-col items-center gap-4 px-10 text-center" style={{ color: "var(--ink)" }}>
-          <Mark size={64} />
+        <GradientMesh animateEntry={phase === "splash"} />
+        <div className="relative z-10 flex flex-col items-center gap-4 px-10 text-center" style={cardStyle}>
+          <div ref={desktopMarkRef} style={{ color: "var(--ink)", opacity: markRevealed ? 1 : 0 }}>
+            <Mark size={64} />
+          </div>
           <p className="max-w-sm text-sm" style={{ color: "var(--ink-2)" }}>
             {t.auth.sub}
           </p>
@@ -114,11 +135,13 @@ export default function LoginPage() {
       {/* Web: right 48% flat surface, form centred; mobile: full-bleed mesh + glass card. */}
       <div className="relative flex flex-[48] flex-col items-center justify-center overflow-y-auto bg-raised p-8">
         <div className="absolute inset-0 desktop:hidden">
-          <GradientMesh />
+          <GradientMesh animateEntry={phase === "splash"} />
         </div>
-        <Glass radius={34} className="login-card relative z-10 w-full max-w-[380px] space-y-6 p-8">
+        <Glass radius={34} className="login-card relative z-10 w-full max-w-[380px] space-y-6 p-8" style={cardStyle}>
           <div className="space-y-1 text-center desktop:hidden">
-            <Mark size={44} className="mx-auto" />
+            <div ref={mobileMarkRef} className="mx-auto inline-block" style={{ opacity: markRevealed ? 1 : 0 }}>
+              <Mark size={44} />
+            </div>
           </div>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -138,7 +161,10 @@ export default function LoginPage() {
             {t.auth.support}
           </p>
 
-          <div className="space-y-2 border-t border-hair pt-4">
+          <div
+            className="space-y-2 border-t border-hair pt-4"
+            style={{ opacity: demoVisible ? 1 : 0, transition: "opacity 300ms var(--ease-out)" }}
+          >
             <DemoRow onError={setError} />
           </div>
         </Glass>

@@ -911,3 +911,60 @@ the natural reading, matching how `--hair`/`--hair-bright` themselves already fl
 added the hover state (`--ink-3` → `--ink-2`) the correction specifies for inactive
 segments, which the existing implementation never had at all.
 
+## 2026-08-26 — The login opening sequence (corrections-5 §3)
+
+**D-75. Built the splash→login handoff Phase 4 explicitly deferred.** Phase 4's own
+notes flagged this: "the full splash→login motion handoff (brief §13.2) were not built —
+revisit if a later phase's own Done-when needs the rest." `brief-chain/07-corrections-5`
+§3 is that later need. Built as `components/auth/opening-sequence.tsx`
+(`useOpeningSequence` + `OpeningOverlay`), wired into the login page only: a 1100ms splash
+(full mesh + grain + centred lockup, reusing the mesh entry bloom from corrections-3 §2.1
+via `GradientMesh`'s new `animateEntry` prop), then an 1100-1900ms transition in which the
+overlay lockup travels — via a measured-`getBoundingClientRect()` FLIP, not a hand-computed
+position — to wherever the login screen's own (real, momentarily-invisible) Mark element
+actually sits, before the overlay is swapped for that real element. Once per session
+(`sessionStorage`), skipped entirely under `prefers-reduced-motion`.
+
+**D-76. The complete "lockup" (glyph, spark, and the typeset letters) does not exist as a
+component, so the splash travels the icon-only `Mark`, not the full wordmark.** Phase 4's
+own notes already flagged this as unresolved ("the wordmark's body typeface is unresolved
+in the design source itself... do not treat [the plain serif fallback] as the final
+choice"). Building the real lockup (with the precise baseline/x-height/overlap rules from
+corrections-3 §1 and corrections-5 §1) is a separate, nontrivial typographic task this pass
+did not take on. When it exists, `OpeningOverlay` should render it instead of `Mark` — the
+travel/measurement logic doesn't otherwise change.
+
+**D-77. On the desktop split layout, "nothing else on it" during the splash is not fully
+true.** The brief's splash step assumes one full-screen surface; this app's desktop login
+is a 52/48 split where the right column is an opaque flat panel that Phase 4 already
+renders unconditionally (`bg-raised`, no mesh, ≥900px). Making that panel itself appear
+only at the transition would need the mesh's own container to resize from full-viewport
+down to 52%-width without visibly relaying out its blobs — a materially bigger task than
+this pass's scope. Accepted as a documented gap: on desktop, the flat right panel is
+visible from the first frame; the lockup travel, entry bloom, and card/demo timing are
+otherwise unaffected and correct on both layouts.
+
+**D-78. A real bug: the splash silently skipped itself on every load, in dev.** React
+Strict Mode's mount→cleanup→mount effect double-invoke meant the first (discarded)
+invocation wrote the "seen" flag to `sessionStorage` before the second (surviving)
+invocation read it back — so the effect that actually persisted always saw a session
+already marked "seen" and jumped straight to the fully-revealed state. Fixed by caching
+the pre-write decision in a `useRef`, computed once and reused across the double-invoke,
+rather than re-reading the (by then self-mutated) `sessionStorage` value on each
+invocation.
+
+**D-79. A second real bug: the lockup's travel kept restarting instead of running once.**
+`OpeningOverlay`'s measurement effect depended on a `targetRefs` array passed as an inline
+literal from the login page — a new array identity on every render, including the
+re-renders `cardVisible`/`demoVisible`'s own timers triggered mid-transition. Each
+re-render re-ran the effect, re-measured, and reset the 700ms CSS transition from
+whatever position the lockup happened to be in at that moment, so by the time the overlay
+unmounted at `revealed` the travel had never actually finished. Caught by logging the
+effect's own invocations, not by watching it visually — the wall-clock delay this dev
+environment's hydration/compile overhead adds (confirmed independently, by instrumenting
+`performance`-relative timestamps, to be large and inconsistent between runs) made
+screenshot-based timing sampling alone too unreliable to trust as the primary signal.
+Fixed by memoizing the ref array (`useMemo`) in the login page so its identity is stable
+across renders; verified via the same instrumentation that the measurement effect now
+fires exactly once per transition.
+
