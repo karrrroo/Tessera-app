@@ -100,7 +100,7 @@ export default function LoginPage() {
         type="submit"
         disabled={busy}
         className="w-full rounded-full px-4 py-2.5 text-sm font-medium disabled:opacity-50"
-        style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+        style={{ background: "var(--btn-primary-bg)", color: "var(--btn-primary-fg)" }}
       >
         {t.auth.submit}
       </button>
@@ -178,7 +178,7 @@ export default function LoginPage() {
             specifically, even the small blur-reachable corner accent still
             read as a residual dark smudge. Every other GlassLayered surface
             (the nav pill, sheets, modals) keeps layer 1 as specified. */}
-        <GlassLayered radius={34} solid={false} className="login-card w-full max-w-[360px] space-y-6 p-8" style={cardStyle}>
+        <GlassLayered radius={28} solid={false} className="login-card w-full max-w-[360px] space-y-6 p-8" style={cardStyle}>
           {cardBody}
         </GlassLayered>
       </div>
@@ -188,7 +188,7 @@ export default function LoginPage() {
           "second column" to bleed into in the first place). */}
       <div className="absolute inset-0 grid place-items-center overflow-y-auto p-8 desktop:hidden">
         <GradientMesh animateEntry={phase === "splash"} />
-        <Glass radius={34} className="login-card relative z-10 w-full max-w-[380px] space-y-6 p-8" style={cardStyle}>
+        <Glass radius={28} className="login-card relative z-10 w-full max-w-[380px] space-y-6 p-8" style={cardStyle}>
           <div className="space-y-1 text-center">
             <div ref={mobileMarkRef} className="mx-auto inline-block" style={{ opacity: markRevealed ? 1 : 0 }}>
               <Mark size={44} />

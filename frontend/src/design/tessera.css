@@ -32,6 +32,16 @@
      sequence.tsx). */
   --t-entry: 420ms;
 
+  /* The login sign-in button, and only it — deliberately not --accent/
+     --accent-fg, so pointing this at the accent colour later is a one-line
+     change to these two tokens rather than a hunt through the component.
+     Value is the theme's own ink/base inversion (--ink is already the
+     correct cream/near-black per theme; --bg-base is its usable-as-text
+     opposite), referenced rather than re-hardcoded so it keeps tracking
+     each theme's real tokens instead of a second, driftable copy of them. */
+  --btn-primary-bg: var(--ink);
+  --btn-primary-fg: var(--bg-base);
+
   /* --accent-tint never resolves to pure black/white (brief §8) — this is
      black's own fallback tint (steel), not a derived value. AccentProvider
      overrides --accent/--accent-fg/--accent-tint inline for any non-black

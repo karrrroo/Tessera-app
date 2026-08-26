@@ -1224,3 +1224,37 @@ regressed since the prior commit (`51dc4f4`) — re-ran the same measurements (e
 segments in all three locales, zero hydration console warnings, the two-path animation's
 `animationName`s present) rather than re-doing already-verified work.
 
+## 2026-08-27 (cont'd) — Fourth Lockup round: diagnosis, button token, corner check
+
+**D-101. Diagnosed rather than re-fixed: `grep -rn "Lockup\|<Mark" frontend/src` finds zero
+`Lockup` components anywhere — 8 real `<Mark .../>` call sites (login desktop/mobile,
+the splash overlay, both ID cards, the app header, the auth-gate loading screen), plus two
+comment-only mentions of "lockup" (`SPLASH_LOCKUP_SIZE`'s name, and sidebar-nav.tsx's own
+"Expanded: LOCKUP-H" spec note next to the `Mark`-only code that actually ships).** `/login`
+resolves to exactly one file, `app/(auth)/login/page.tsx` — no competing route, no `(auth)`
+layout that could be rendering a different brand element underneath it. This *is* the whole
+answer: there is nothing to have "regressed" four times, because a `Lockup` component was
+never built in the first place — every round has been re-confirming the same D-76/D-84/D-96
+blocker (needs the user's typeface pick from `essera-typeface-trials`), not a bug in what's
+mounted.
+
+**D-102. Added `--btn-primary-bg`/`--btn-primary-fg`, used only by the login sign-in
+button, decoupled from `--accent`/`--accent-fg`.** Defined as `var(--ink)`/`var(--bg-base)`
+(a reference, not a hardcoded duplicate, so it keeps tracking each theme's real tokens) —
+this already produces the two literal colours given (cream `#F4F2EE` background on dark
+theme, dark background on light theme) without introducing a second copy of them. Pointing
+this button at the accent colour later is now a two-line change to these tokens' values,
+not a hunt through the component.
+
+**D-103. Checked, not reproducible: square bottom corners on the login card.** Computed
+style on the actual `.login-card` element already showed `border-radius` + `overflow:
+hidden` correctly applied; `document.elementFromPoint()` sampled 3px diagonally in from
+each bottom corner returned the (transparent) grid wrapper *behind* the card, not the card
+itself — exactly what a correctly-rounded corner predicts, since that point sits outside a
+correctly-drawn arc of that radius. What looked square in a small zoomed screenshot crop was
+the page's own mesh, visible through the (real) rounded cutout, happening to be a fairly flat
+colour at that exact spot. Did change the radius value itself, 34px → 28px, as explicitly
+specified — the design brief's own §"card (narrow/mobile)" figure is 34px, so this is a
+deliberate, requested departure from it for this surface, not a correction toward it; noting
+the conflict here rather than resolving it myself.
+
