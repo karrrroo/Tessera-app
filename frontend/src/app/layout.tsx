@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/state/auth-provider";
 import { LocaleProvider } from "@/i18n/locale-provider";
@@ -15,8 +15,11 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Design brief §4: "Noto Serif Armenian for headings, Noto Sans Armenian
+// for body, JetBrains Mono for marks" — every `font-mono` in this app
+// resolves through this, not Geist Mono (globals.css's `--font-mono`).
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -29,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col">
         <IdShellPrecache />

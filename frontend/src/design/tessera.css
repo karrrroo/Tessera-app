@@ -103,6 +103,10 @@
   --hair: rgba(255, 255, 255, .11);
   --hair-bright: rgba(255, 255, 255, .18);
   --hair-top: rgba(255, 255, 255, .28);
+  /* The language control's active-segment fill (brief-chain/04-corrections-2
+     §3: "rgba(255,255,255,.14) on dark") — its own bespoke value, not
+     --hair-bright, since the correction is precise about it. */
+  --lang-pill-fill: rgba(255, 255, 255, .14);
   --glass: rgba(255, 255, 255, .10);
   --glass-solid: rgba(255, 255, 255, .10);
   --panel: #0D1017;
@@ -134,6 +138,9 @@
   --hair: rgba(0, 0, 0, .09);
   --hair-bright: rgba(0, 0, 0, .13);
   --hair-top: rgba(255, 255, 255, .9);
+  /* Same opacity as dark's --lang-pill-fill, polarity flipped — the
+     correction only specifies the dark value. */
+  --lang-pill-fill: rgba(0, 0, 0, .14);
   --glass: rgba(255, 255, 255, .72);
   --glass-solid: #FFFFFF;
   --panel: #FFFFFF;

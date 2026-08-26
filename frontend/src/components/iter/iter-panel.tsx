@@ -41,32 +41,63 @@ function IterEmptyBackground() {
   );
 }
 
-// IT-9: the 2px animated conic-gradient border. This animation must appear
-// nowhere else in the product — its keyframe/property names are scoped
-// with an `iter-` prefix for exactly that reason.
-function ThinkingPill() {
+// IT-9 (brief-chain/04-corrections-2 "THE THINKING RING", superseding
+// 01-v2.1-corrections Fix 9): a 2px conic-gradient ring, four colour stops,
+// rotating 360° over 2s linear infinite. This rotation must appear nowhere
+// else in the product — not on buttons, cards, or inputs (corrections-3)
+// — hence the scoped `tessera-iter-` keyframe/property names. Built with a
+// ::before carrying the gradient at a negative inset, with the pill's own
+// opaque background painting over its centre so only the outer band shows;
+// the pill itself is left-aligned and sized like a short message bubble,
+// not a fixed box.
+function ThinkingPill({ visible }: { visible: boolean }) {
+  const [mounted, setMounted] = useState(visible);
+  const [exiting, setExiting] = useState(false);
+
+  // Both branches set state directly rather than in a callback — an
+  // exit-transition timer, with no external system to hang a callback off,
+  // same reasoning as this codebase's other set-state-in-effect exemptions.
+  useEffect(() => {
+    if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMounted(true);
+      setExiting(false);
+      return;
+    }
+    if (!mounted) return;
+    setExiting(true);
+    const id = setTimeout(() => setMounted(false), 140);
+    return () => clearTimeout(id);
+  }, [visible, mounted]);
+
+  if (!mounted) return null;
+
   return (
-    <div className="mt-3 flex">
-      <div className="relative grid h-10 w-[90px] place-items-center overflow-hidden rounded-full">
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background:
-              "conic-gradient(from var(--iter-angle), var(--accent-tint), var(--qr-bloom-1), var(--iter-mid), var(--iter-bloom-1), var(--accent-tint))",
-            animation: "tessera-iter-spin 1400ms linear infinite",
-          }}
-        />
-        <div className="absolute inset-[2px] rounded-full" style={{ background: "var(--panel)" }} />
-        <div className="relative flex gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--ink-3)", animation: "tessera-iter-dot 1.2s linear infinite" }} />
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--ink-3)", animation: "tessera-iter-dot 1.2s linear .2s infinite" }} />
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--ink-3)", animation: "tessera-iter-dot 1.2s linear .4s infinite" }} />
-        </div>
+    <div className="mt-3 flex" style={{ animation: `${exiting ? "tessera-iter-fade-out 140ms" : "tessera-iter-fade-in 180ms"} var(--ease-out) both` }}>
+      <div className="tessera-iter-thinking-pill relative flex h-10 items-center gap-1.5 rounded-full px-4" style={{ background: "var(--panel)" }}>
+        <span className="h-[5px] w-[5px] rounded-full" style={{ background: "var(--ink-3)", animation: "tessera-iter-dot 1.2s linear infinite" }} />
+        <span className="h-[5px] w-[5px] rounded-full" style={{ background: "var(--ink-3)", animation: "tessera-iter-dot 1.2s linear .2s infinite" }} />
+        <span className="h-[5px] w-[5px] rounded-full" style={{ background: "var(--ink-3)", animation: "tessera-iter-dot 1.2s linear .4s infinite" }} />
       </div>
       <style>{`
         @property --iter-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        .tessera-iter-thinking-pill::before {
+          content: "";
+          position: absolute;
+          inset: -2px;
+          z-index: -1;
+          border-radius: inherit;
+          background: conic-gradient(from var(--iter-angle), var(--accent-tint), var(--qr-bloom-1), var(--iter-mid), var(--iter-bloom-1));
+          animation: tessera-iter-spin 2s linear infinite;
+        }
         @keyframes tessera-iter-spin { to { --iter-angle: 360deg; } }
         @keyframes tessera-iter-dot { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+        @keyframes tessera-iter-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes tessera-iter-fade-out { from { opacity: 1; } to { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+          .tessera-iter-thinking-pill::before { animation: none; }
+          .tessera-iter-thinking-pill span { animation: none !important; opacity: .6; }
+        }
       `}</style>
     </div>
   );
@@ -186,7 +217,7 @@ export function IterPanel() {
             </div>
           ))}
 
-          {sending && <ThinkingPill />}
+          <ThinkingPill visible={sending} />
           {error && (
             <div className="mt-3 flex justify-start">
               <span className="max-w-[85%] rounded-[18px] px-3.5 py-2.5 text-sm" style={{ background: "var(--surface2)", color: "var(--danger)" }}>

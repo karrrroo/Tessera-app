@@ -7,7 +7,8 @@ connection and why this phase overrides that. D-61 through D-66 record a follow-
 a real, pre-existing mobile-shell bug (the floating pill nav and Iter button weren't
 actually pinned to the viewport on any screen taller than one) found via a requested
 390px-viewport audit, and the Iter empty-state background implemented per the design
-brief's own later correction.
+brief's own later correction. D-67 records a second follow-up: the thinking pill rebuilt
+against a newer round of the same brief-chain correction.
 
 ## Delivers
 
@@ -80,6 +81,13 @@ fading before that box's own edge, producing exactly the "hard edge" the design 
 this background implements was written to eliminate. Caught by screenshot, not by
 calculation; fixed by moving the background to the full panel and giving each sibling
 (header, message list, composer) its own `position: relative` so they still paint above it.
+
+**The thinking pill was built from an outdated round of the brief chain (D-67).** A later
+correction changes the ring from a five-stop repeating loop at 1400ms to a four-stop conic
+gradient at a flat 2s rotation, masked via a `::before` at negative inset rather than a
+second layered div, with its own 180ms/140ms fade transitions. Rebuilt to the corrected
+spec; this needed the component to own a brief exit-delay (`mounted`/`exiting` state) since
+nothing else in the codebase yet had a component that fades itself out before unmounting.
 
 ## Verified directly (not just by inspection)
 

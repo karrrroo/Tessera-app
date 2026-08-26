@@ -22,16 +22,21 @@ export function LanguagePill() {
     >
       <span
         aria-hidden
-        className="absolute top-0.5 h-7 rounded-full bg-hair-bright transition-transform duration-200"
-        style={{ width: SEGMENT_WIDTH, transform: `translateX(${3 + activeIndex * SEGMENT_WIDTH}px)`, transitionTimingFunction: "var(--ease-out)" }}
+        className="absolute top-0.5 h-7 rounded-full transition-transform duration-200"
+        style={{
+          width: SEGMENT_WIDTH,
+          background: "var(--lang-pill-fill)",
+          transform: `translateX(${3 + activeIndex * SEGMENT_WIDTH}px)`,
+          transitionTimingFunction: "var(--ease-out)",
+        }}
       />
       {LOCALES.map((l) => (
         <button
           key={l}
           type="button"
           onClick={() => setLocale(l)}
-          className="relative z-10 flex items-center justify-center transition-colors"
-          style={{ width: SEGMENT_WIDTH, color: l === locale ? "var(--ink)" : undefined }}
+          className={`relative z-10 flex items-center justify-center transition-colors ${l === locale ? "text-ink" : "text-ink-3 hover:text-ink-2"}`}
+          style={{ width: SEGMENT_WIDTH }}
         >
           {CODES[l]}
         </button>

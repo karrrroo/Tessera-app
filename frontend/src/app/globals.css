@@ -9,7 +9,9 @@
    of the roadmap's JS config snippet. */
 @theme inline {
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Design brief §4: "JetBrains Mono for marks" — every `font-mono` in the
+     app resolves through this. */
+  --font-mono: var(--font-jetbrains-mono);
 
   /* Brief §8ter/§8quater/PL-1: 768px and 900px, defined once. Use `tablet:`
      for 768px and `desktop:` for 900px — never a bare `md:`/`lg:`, which

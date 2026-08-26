@@ -149,6 +149,25 @@ computing "achromatic."
         in `tessera.css` (not separately verified with a reduced-motion emulation in this
         pass).
 
+## A third real bug, found later (Phase 11 pass), documented here since it belongs to this phase
+
+**`font-mono` never actually resolved to JetBrains Mono (D-68).** `layout.tsx` loaded
+`Geist_Mono` from `next/font/google` and `globals.css`'s `--font-mono` pointed at it — so
+every `font-mono` use anywhere in the app (mark cells, timestamps, the language pill)
+silently rendered in Geist Mono instead of the brief's explicit "JetBrains Mono for marks"
+(§4). Found while checking the login screen's language control against a later brief
+correction, not by this phase's own testing. Fixed by swapping the loader and its CSS
+variable name at the root (`layout.tsx`, `globals.css`) — a one-line-looking change with a
+project-wide blast radius, since nothing about it is component-local.
+
+**The language pill's active-fill token and missing hover state (D-69).** A later brief
+correction (`brief-chain/04-corrections-2` §3) is precise about the language control's
+active-segment fill (`rgba(255,255,255,.14)` on dark) and specifies an inactive-segment
+hover state (`--ink-3` → `--ink-2`) this phase's original build never had. Added a
+dedicated `--lang-pill-fill` token (rather than reusing the general-purpose `--hair-bright`,
+which is a different opacity) and the missing hover, in `tessera.css` and
+`language-pill.tsx`.
+
 ## Notes for the next phase
 
 - `components/shell/nav-items.ts`'s role→item mapping is explicitly provisional (D-19).

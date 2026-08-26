@@ -875,3 +875,39 @@ out of the response's `Content-Disposition` header, turns the response body into
 `Blob`/`createObjectURL`, and clicks a throwaway anchor programmatically — the standard
 pattern for an authenticated file download in an SPA.
 
+## 2026-08-26 — Three more design-brief corrections applied
+
+**D-67. The Iter thinking ring was built from an outdated round of the brief chain.**
+`brief-chain/04-corrections-2` ("THE THINKING RING") supersedes the version this build
+originally read, in two ways: four conic-gradient colour stops (`--accent-tint`,
+`--qr-bloom-1`, `--iter-mid`, `--iter-bloom-1`), not the five-stop repeating-loop version
+built earlier this phase, and a 2s rotation, not 1400ms. Rebuilt to the corrected spec: a
+`::before` carrying the gradient at a negative inset with the pill's own opaque background
+masking its centre (rather than the earlier two-`<div>` approach), sized like a short
+message bubble rather than a fixed 90px, 5px dots, and explicit 180ms-in/140ms-out fades —
+the last of which needed the component to own a brief `mounted`/`exiting` state internally
+(a delayed unmount) since nothing in this codebase already had an exit-transition pattern to
+copy.
+
+**D-68. Fixing the thinking ring surfaced a project-wide bug: `font-mono` was never actually
+JetBrains Mono.** `app/layout.tsx` loaded `Geist_Mono` and `globals.css` pointed `--font-mono`
+at it — meaning every `font-mono` in the app (mark cells, timestamps, the language pill,
+the thinking ring itself) rendered in Geist Mono. The design brief is explicit and singular
+about this ("Noto Serif Armenian for headings, Noto Sans Armenian for body, **JetBrains Mono
+for marks**," brief §4) — not a per-component choice. Fixed at the root: swapped the loader
+to `JetBrains_Mono` and renamed the CSS variable it feeds (`--font-jetbrains-mono`) so it
+no longer claims to be a font it isn't.
+
+**D-69. The language control's active-fill colour got its own token
+(`--lang-pill-fill`) instead of reusing `--hair-bright`.** The existing implementation
+already matched most of `corrections-2` §3 (short HY/EN/RU codes, sliding 200ms fill,
+Settings-only caption with the full autonym) — measuring it directly showed the *only* real
+gaps were the font (D-68 fixed this for free) and the fill opacity: `--hair-bright` is
+`.18`/`.13` (dark/light), a general-purpose token tuned for hairline borders, while the
+correction gives this one control a precise `rgba(255,255,255,.14)` **on dark**. Added
+`--lang-pill-fill` at exactly `.14`, same value both themes, polarity flipped for light
+(the correction only states the dark value; flipping polarity while holding opacity fixed is
+the natural reading, matching how `--hair`/`--hair-bright` themselves already flip). Also
+added the hover state (`--ink-3` → `--ink-2`) the correction specifies for inactive
+segments, which the existing implementation never had at all.
+
