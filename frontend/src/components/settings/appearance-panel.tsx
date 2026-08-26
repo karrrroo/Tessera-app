@@ -47,7 +47,7 @@ export function AppearancePanel() {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           {t.set.themeTitle}
         </h3>
         <p className="text-xs" style={{ color: "var(--ink-3)" }}>
@@ -73,7 +73,7 @@ export function AppearancePanel() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           {t.set.accentTitle}
         </h3>
         <p className="text-xs" style={{ color: "var(--ink-3)" }}>
@@ -93,7 +93,7 @@ export function AppearancePanel() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           {t.bg.title}
         </h3>
         <div className="flex flex-wrap gap-3">
@@ -113,7 +113,7 @@ export function AppearancePanel() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           {t.set.langTitle}
         </h3>
         <LanguagePill />

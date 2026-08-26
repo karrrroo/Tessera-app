@@ -968,3 +968,52 @@ Fixed by memoizing the ref array (`useMemo`) in the login page so its identity i
 across renders; verified via the same instrumentation that the measurement effect now
 fires exactly once per transition.
 
+## 2026-08-26 — Login screen corrections and an auth-guard gap
+
+**D-80. `text-transform: uppercase` removed from every Armenian-capable label except the
+language pill.** Nine real violations, all bound to translatable `t.*` strings (Settings'
+four section headers, the demo-row label, the gradebook grid's two column headers, the ID
+card's three labels, Export's two headers, the teacher ID card's role label) — forced
+uppercase breaks Armenian legibility and was never how the script is set. Two
+non-Armenian spots (`/dev/tokens`'s hardcoded English headers, the xlsx/csv format
+toggle/cell) lost it too, per the user's explicit "everywhere except the pill" rule rather
+than carving out a second exception myself. Existing `tracking-wide`/`--ink-3` styling on
+each was already the emphasis mechanism the correction asked for — removing `uppercase`
+was the only change needed anywhere.
+
+**D-81. `auth.title` fixed to a single word, and a duplicated string separated.** "Մուտք
+համակարգ" (two bare nominatives) is grammatically wrong; changed to "Մուտք" — matching en's
+"Sign in" and ru's already-correct "Вход в систему" (a preposition + accusative, not the
+same bug). Scanned all 340 keys across the three locale files for the same bare-noun-pair
+pattern; found no other instance. Separately, the login page's left panel was showing
+`auth.sub` (the form's own subhead, duplicated across both columns) instead of its own
+distinct v2.1 Fix 4 line — added a new key, `auth.tagline`, with hy verbatim from the
+brief and my own en/ru translations (the design source is Armenian-only for this string).
+
+**D-82. The mesh bleeds across the 52/48 seam instead of stopping at it (user's explicit
+override of a brief gap).** The desktop login's right column was flat `--bg-raised` right
+up to a hard vertical line at the column boundary — a real "you can point at where the
+colour ends" violation of the brief's own no-visible-edge rule. Rather than extending a
+full second `GradientMesh` instance into the right column (whose blob positions are
+percentages of their own container and would render wrong cropped shapes at a narrow
+width), added one small radial-gradient wash anchored at the seam (`left:0`, reusing
+`--mesh-2`, fading to transparent within its own 420px box) as an early child of the right
+column — painting on top of that column's own flat background by ordinary box-nesting,
+with no separate z-index bookkeeping needed. Verified via a cropped screenshot at the seam
+that no edge is visible, at both a normal and a short (700px) viewport height.
+
+**D-83. Rebuilt both login columns with `grid; place-items: center`, not flex with
+margins — the flex version was pushing content above the viewport on short screens (v2.1
+Fix 5).** This is also what let the (now-fixed) two-line heading get clipped at the top:
+flex `items-center` centers a too-tall block by pushing it equally off both edges, and
+`overflow:hidden` on the shell then clips whichever edge is currently off-screen. Verified
+at 900×700 (short) and 1300×900 — no clipping, no wrap, heading fully visible with
+comfortable margin from the top in both.
+
+**D-84. The left panel still renders the bare `Mark`, not `LOCKUP-INTEGRATED`.** Building
+the real 200px-wide integrated wordmark (glyph + tucked "e" + spark + typeset second "s" +
+"era") needs a chosen typeface, and per corrections-2 §2 ("do not pick one yourself") that
+choice is the user's, not mine — I built and published a six-candidate comparison
+(essera-typeface-trials artifact) rather than picking one. This is the one open item of
+the five reported; the other four are complete.
+

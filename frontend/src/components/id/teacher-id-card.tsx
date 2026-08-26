@@ -24,7 +24,7 @@ export function TeacherIdCard({ holder }: { holder: TeacherHolder }) {
       >
         <Grain />
         <div className="relative flex flex-col gap-4.5">
-          <span className="text-[10px] uppercase tracking-[.1em]" style={{ color: "var(--id-card-kind-fg)" }}>
+          <span className="text-[10px] tracking-[.1em]" style={{ color: "var(--id-card-kind-fg)" }}>
             {t.common.roleTeacher}
           </span>
           <span style={{ color: "var(--id-card-fg)" }}>

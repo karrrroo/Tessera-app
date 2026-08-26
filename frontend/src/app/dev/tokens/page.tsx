@@ -114,7 +114,7 @@ export default function DevTokensPage() {
       </div>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h2 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           Background ([data-bg])
         </h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -125,7 +125,7 @@ export default function DevTokensPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h2 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           Theme ([data-tt])
         </h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -136,7 +136,7 @@ export default function DevTokensPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h2 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           Root (accent-tint)
         </h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -145,7 +145,7 @@ export default function DevTokensPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h2 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           Grade scale (fixed — never varies with theme/background/accent)
         </h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -156,7 +156,7 @@ export default function DevTokensPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h2 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           Accents (7)
         </h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

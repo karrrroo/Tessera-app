@@ -28,7 +28,7 @@ export default function SettingsPage() {
       <AppearancePanel />
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
           {t.set.gAccount}
         </h3>
         <SessionList />

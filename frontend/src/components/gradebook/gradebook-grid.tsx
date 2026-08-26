@@ -72,7 +72,7 @@ export function GradebookGrid({
   return (
     <div className="overflow-auto rounded-[26px] border p-4" style={{ background: "var(--bg-base)", borderColor: "var(--hair)" }}>
       <div className="grid gap-1.5" style={{ gridTemplateColumns: `160px repeat(${assessments.length}, 64px) 56px 40px`, minWidth: "max-content" }}>
-        <div className="sticky left-0 top-0 z-20 bg-[var(--bg-base)] py-1 text-[10.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-3)" }}>
+        <div className="sticky left-0 top-0 z-20 bg-[var(--bg-base)] py-1 text-[10.5px] tracking-[.06em]" style={{ color: "var(--ink-3)" }}>
           {studentLabel}
         </div>
         {assessments.map((a) => (
@@ -82,7 +82,7 @@ export function GradebookGrid({
             </span>
           </div>
         ))}
-        <div className="sticky top-0 z-10 bg-[var(--bg-base)] text-right text-[10.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-3)" }}>
+        <div className="sticky top-0 z-10 bg-[var(--bg-base)] text-right text-[10.5px] tracking-[.06em]" style={{ color: "var(--ink-3)" }}>
           {avgLabel}
         </div>
         <div className="sticky top-0 z-10 bg-[var(--bg-base)]">

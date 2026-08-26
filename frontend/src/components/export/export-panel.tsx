@@ -213,7 +213,7 @@ function FormatToggle({ value, onChange }: { value: ExportFormat; onChange: (f: 
             key={f}
             type="button"
             onClick={() => onChange(f)}
-            className="rounded-full px-3.5 py-1.5 text-xs font-medium uppercase"
+            className="rounded-full px-3.5 py-1.5 text-xs font-medium tracking-wide"
             style={{ background: value === f ? "var(--accent)" : "transparent", color: value === f ? "var(--accent-fg)" : "var(--ink-2)", border: value === f ? "none" : "1px solid var(--hair)" }}
           >
             {f}
@@ -247,7 +247,7 @@ export function ExportPanel() {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+      <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
         {t.exp.title}
       </h3>
       <p className="text-xs" style={{ color: "var(--ink-3)" }}>

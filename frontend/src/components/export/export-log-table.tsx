@@ -19,7 +19,7 @@ export function ExportLogTable() {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+      <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
         {t.exp.logTitle}
       </h3>
       <p className="text-xs" style={{ color: "var(--ink-3)" }}>
@@ -43,7 +43,7 @@ export function ExportLogTable() {
                     <td className="whitespace-nowrap px-3 py-2" style={{ color: "var(--ink-2)" }}>
                       {row.scope.scope}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 font-mono uppercase" style={{ color: "var(--ink-3)" }}>
+                    <td className="whitespace-nowrap px-3 py-2 font-mono" style={{ color: "var(--ink-3)" }}>
                       {row.format}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-mono" style={{ color: "var(--ink)" }}>

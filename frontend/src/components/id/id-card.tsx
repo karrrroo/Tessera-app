@@ -21,7 +21,7 @@ export function IdCard({ holder, onOpenQr }: { holder: StudentHolder; onOpenQr: 
       >
         <Grain />
         <div className="relative flex flex-col gap-4.5">
-          <span className="text-[10px] uppercase tracking-[.1em]" style={{ color: "var(--id-card-kind-fg)" }}>
+          <span className="text-[10px] tracking-[.1em]" style={{ color: "var(--id-card-kind-fg)" }}>
             {t.scr.id.kind}
           </span>
           <span style={{ color: "var(--id-card-fg)" }}>
@@ -40,7 +40,7 @@ export function IdCard({ holder, onOpenQr }: { holder: StudentHolder; onOpenQr: 
           </span>
           <span className="mt-2.5 flex gap-5">
             <span className="flex flex-col gap-0.5">
-              <span className="text-[9.5px] uppercase tracking-[.08em]" style={{ color: "var(--id-card-fg-3)" }}>
+              <span className="text-[9.5px] tracking-[.08em]" style={{ color: "var(--id-card-fg-3)" }}>
                 {t.set.kCls}
               </span>
               <span className="font-mono text-[13px]" style={{ color: "var(--id-card-fg)" }}>
@@ -48,7 +48,7 @@ export function IdCard({ holder, onOpenQr }: { holder: StudentHolder; onOpenQr: 
               </span>
             </span>
             <span className="flex flex-col gap-0.5">
-              <span className="text-[9.5px] uppercase tracking-[.08em]" style={{ color: "var(--id-card-fg-3)" }}>
+              <span className="text-[9.5px] tracking-[.08em]" style={{ color: "var(--id-card-fg-3)" }}>
                 {t.scr.id.code}
               </span>
               <span className="font-mono text-[13px]" style={{ color: "var(--id-card-fg)" }}>

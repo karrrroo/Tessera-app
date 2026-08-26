@@ -40,6 +40,7 @@ const dict = {
   },
   "auth": {
     "title": "Sign in",
+    "tagline": "The academic record — in your pocket, not in the front office",
     "sub": "Accounts are created by the institution",
     "idLabel": "Email or ID",
     "pw": "Password",
@@ -79,7 +80,8 @@ const dict = {
     "saveEnter": "Save and sign in",
     "firstTitle": "Set your password",
     "firstBody": "The temporary password issued by your institution must be changed at first sign-in.",
-    "saveGo": "Save and continue"
+    "saveGo": "Save and continue",
+    "signOut": "Sign out"
   },
   "bg": {
     "title": "Background",
@@ -259,10 +261,11 @@ const dict = {
       "emptyTitle": "You have not submitted a request yet",
       "emptyBody": "Olympiad, course, volunteering — submit it and earn credit.",
       "emptyBtn": "Submit a request",
-      "comp": "Competition",
+      "olympiad": "Olympiad",
       "course": "Course",
-      "vol": "Volunteering",
-      "extra": "Extracurricular",
+      "sport": "Sport",
+      "volunteering": "Volunteering",
+      "art": "Art",
       "approved": "Approved",
       "declined": "Declined",
       "pending": "Awaiting review"

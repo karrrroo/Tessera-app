@@ -45,7 +45,7 @@ export function DemoRow({ onError }: { onError: (message: string) => void }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+      <p className="text-xs tracking-wide" style={{ color: "var(--ink-3)" }}>
         {t.auth.demoLabel}
       </p>
       <div className="flex flex-wrap gap-2">
