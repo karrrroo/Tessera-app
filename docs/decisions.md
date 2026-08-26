@@ -1017,3 +1017,25 @@ choice is the user's, not mine — I built and published a six-candidate compari
 (essera-typeface-trials artifact) rather than picking one. This is the one open item of
 the five reported; the other four are complete.
 
+**D-85. A real gap: `requirePasswordChanged` was wired into only 2 of 8 authenticated
+routers.** `admin` and `auth` had it; `record`, `gradebook`, `export`, `iter`,
+`credentials`, and `identity`'s two user-auth`d routes, plus `/api/me/preferences`
+(defined directly in `app.ts`, not a router), did not — meaning a user with
+`mustChangePassword=true` could call the gradebook, export, Iter, credentials, or record
+APIs directly (curl, bypassing the frontend's `AuthGate` entirely) despite AUTH-7's intent
+that only `/api/me`, `/api/auth/logout`, and `/api/auth/password/change` stay reachable.
+Wired the existing middleware into all of them. Verified live: a `mustChangePassword`
+account's real access token gets `AUTH_PASSWORD_CHANGE_REQUIRED` from all eight now-guarded
+endpoints, while `/api/me`, logout (204), and password/change (reaches its own real
+`AUTH_CURRENT_PASSWORD_INVALID` check, not the guard) stay reachable.
+
+**D-86. `/first-login` gained a sign-out escape, not a back link.** A plain link back to
+`/login` would leave the still-valid session alive — typing `/overview` by hand would then
+enter the app without ever changing the password, since the guard only fires from
+`AuthGate`'s own redirect logic, not from URL navigation itself removing the token. Added
+a plain-text `--ink-3` button (label `auth.signOut` — "Ելք"/"Sign out"/"Выйти", deliberately
+not reusing `common.logout`'s fuller phrasing) that calls the real logout endpoint before
+navigating. Verified live via a real browser session: sign-out lands on `/login`, and a
+direct post-sign-out navigation to `/overview` also lands on `/login` (not `/first-login`),
+confirming the server-side session was actually revoked, not just cleared client-side.
+

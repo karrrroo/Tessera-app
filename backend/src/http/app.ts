@@ -9,7 +9,9 @@ import { recordRouter } from "../modules/record/routes.js";
 import { gradebookRouter } from "../modules/gradebook/routes.js";
 import { iterRouter } from "../modules/iter/routes.js";
 import { exportRouter } from "../modules/export/routes.js";
+import { credentialsRouter } from "../modules/credentials/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
+import { requirePasswordChanged } from "./middleware/require-password-changed.js";
 import { asyncHandler } from "./async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "./errors.js";
 import { errorHandler } from "./error-handler.js";
@@ -63,6 +65,9 @@ export function createApp() {
   app.use("/api", iterRouter);
   // /api/export, /api/export/logs (roadmap Phase 9).
   app.use("/api", exportRouter);
+  // /api/credentials, /api/credentials/:id/attachment,
+  // /api/credentials/:id/decision (roadmap Phase 10).
+  app.use("/api", credentialsRouter);
 
   app.get(
     "/api/me",
@@ -82,6 +87,7 @@ export function createApp() {
   app.get(
     "/api/me/preferences",
     requireAuth,
+    asyncHandler(requirePasswordChanged),
     asyncHandler(async (req, res) => {
       if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");
       const profile = await getUserProfile(req.auth.sub);
@@ -93,6 +99,7 @@ export function createApp() {
   app.patch(
     "/api/me/preferences",
     requireAuth,
+    asyncHandler(requirePasswordChanged),
     asyncHandler(async (req, res) => {
       if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");
       const parsed = preferencesPatchSchema.safeParse(req.body);

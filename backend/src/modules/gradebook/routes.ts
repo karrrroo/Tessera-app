@@ -2,6 +2,7 @@ import { Router } from "express";
 import { asyncHandler } from "../../http/async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "../../http/errors.js";
 import { requireAuth } from "../../http/middleware/require-auth.js";
+import { requirePasswordChanged } from "../../http/middleware/require-password-changed.js";
 import {
   createAssessmentSchema,
   gradebookQuerySchema,
@@ -15,6 +16,7 @@ import * as service from "./service.js";
 export const gradebookRouter = Router();
 
 gradebookRouter.use(requireAuth);
+gradebookRouter.use(asyncHandler(requirePasswordChanged));
 
 function auth(req: { auth?: { sub: string; role: "student" | "teacher" | "admin" } }) {
   if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");

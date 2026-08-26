@@ -2,12 +2,14 @@ import { Router } from "express";
 import { asyncHandler } from "../../http/async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "../../http/errors.js";
 import { requireAuth } from "../../http/middleware/require-auth.js";
+import { requirePasswordChanged } from "../../http/middleware/require-password-changed.js";
 import { recordQuerySchema } from "./validation.js";
 import { getArchive, getMarkHistory, getRecord, getSubjectDetail } from "./service.js";
 
 export const recordRouter = Router();
 
 recordRouter.use(requireAuth);
+recordRouter.use(asyncHandler(requirePasswordChanged));
 
 recordRouter.get(
   "/record",

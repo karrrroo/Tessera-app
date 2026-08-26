@@ -3,6 +3,7 @@ import { asyncHandler } from "../../http/async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "../../http/errors.js";
 import { requireAuth } from "../../http/middleware/require-auth.js";
 import { requireAdmin } from "../../http/middleware/require-admin.js";
+import { requirePasswordChanged } from "../../http/middleware/require-password-changed.js";
 import { requireScannerKey } from "../../http/middleware/require-scanner-key.js";
 import { anomaliesQuerySchema, verifySchema } from "./validation.js";
 import { getAnomalies, getMyCredential, getMyToday, verifyScan } from "./service.js";
@@ -12,6 +13,7 @@ export const identityRouter = Router();
 identityRouter.get(
   "/me/credential",
   requireAuth,
+  asyncHandler(requirePasswordChanged),
   asyncHandler(async (req, res) => {
     if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");
     res.json(await getMyCredential(req.auth));
@@ -21,6 +23,7 @@ identityRouter.get(
 identityRouter.get(
   "/me/today",
   requireAuth,
+  asyncHandler(requirePasswordChanged),
   asyncHandler(async (req, res) => {
     if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");
     res.json(await getMyToday(req.auth));
@@ -41,6 +44,7 @@ identityRouter.get(
   "/verify/anomalies",
   requireAuth,
   requireAdmin,
+  asyncHandler(requirePasswordChanged),
   asyncHandler(async (req, res) => {
     const parsed = anomaliesQuerySchema.safeParse(req.query);
     if (!parsed.success) throw VALIDATION_FAILED();

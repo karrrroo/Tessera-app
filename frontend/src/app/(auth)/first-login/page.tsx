@@ -14,12 +14,21 @@ import { landingRouteForRole } from "@/lib/landing-route";
 export default function FirstLoginPage() {
   const { t } = useLocale();
   const router = useRouter();
-  const { status, user, refreshUser } = useAuth();
+  const { status, user, refreshUser, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Not a back link — a plain link to /login would leave the still-valid
+  // session alive, so typing /overview by hand would enter the app without
+  // ever changing the password. Signing out is the only way off this screen
+  // that doesn't defeat the guard.
+  async function signOut() {
+    await logout();
+    router.replace("/login");
+  }
 
   useEffect(() => {
     if (status === "anon") router.replace("/login");
@@ -78,6 +87,14 @@ export default function FirstLoginPage() {
             style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
             {t.auth.saveGo}
+          </button>
+          <button
+            type="button"
+            onClick={signOut}
+            className="block w-full text-center text-[13px]"
+            style={{ color: "var(--ink-3)" }}
+          >
+            {t.auth.signOut}
           </button>
         </form>
       </Glass>
