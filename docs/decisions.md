@@ -679,3 +679,19 @@ inside the sheet uses the same tap-picker pattern `SupersedeDialog` already esta
 (GB-9: the tap picker is primary on mobile) rather than the keyboard state machine, which
 assumes a physical keyboard the mobile layout cannot.
 
+## 2026-08-26 — Neon cutover
+
+**D-54. The Neon cutover described in D-3 is done: `DATABASE_URL` now points at the Neon
+project, and the local Postgres cluster's connection string is kept as `LOCAL_DATABASE_URL`
+for offline dev and rollback only.** No code change was needed — `db/client.ts` already
+branched SSL config on whether `DATABASE_URL` resolves to localhost, built at the time of D-3
+specifically so this swap would be a one-line `.env` change. Verified with a real login
+against the Neon-backed API (`t02@tessera-demo.am`), returning a correct teacher profile.
+Neon was found to already contain the same schema and an independently-seeded dataset
+matching local in shape (student/teacher/class/enrollment counts identical; assessment and
+mark counts differ by a handful, and every row's own id differs — a separate seeding run
+from the same generator, not a copy of local's data) — not verified or produced by this
+build; presumably seeded by the user directly against the Neon project. Per D-3's own
+closing line, C2's full "never alter, never drop" discipline is now in effect for real,
+since this database is the one `DATABASE_URL` actually points at.
+
