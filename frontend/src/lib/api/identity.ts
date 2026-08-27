@@ -39,7 +39,7 @@ export type AnomalyEntry = {
   scannedAt: string;
   scannerId: string;
   location: string | null;
-  result: string;
+  result: "valid" | "revoked" | "unknown" | "signature_invalid" | "not_enrolled";
   previousScannerId: string;
   previousScannedAt: string;
   secondsAgo: number;
