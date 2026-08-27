@@ -17,14 +17,20 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
   const [left, right] = [items.slice(0, 2), items.slice(2, 4)];
 
   const renderGroup = (group: NavItem[]) => (
-    <div className="flex flex-1 items-center justify-evenly">
+    // min-w-0 here too: a CSS grid item's default `1fr` track still sizes
+    // to its content's min-content width unless the item itself allows
+    // shrinking below that — without this, a long active label could
+    // force this whole group's grid column wider than its fair share,
+    // overflowing into the centre button's own space regardless of the
+    // truncation on the Link/span further down.
+    <div className="flex min-w-0 flex-1 items-center justify-evenly">
       {group.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
           <Link
             key={item.id}
             href={item.href}
-            className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium transition-colors"
+            className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium transition-colors"
             style={{
               background: active ? "var(--accent)" : "transparent",
               color: active ? "var(--accent-fg)" : "var(--ink-3)",
@@ -33,7 +39,16 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
             }}
           >
             <NavIcon d={item.icon} size={active ? 24 : 22} />
-            {active && <span className="whitespace-nowrap">{item.label}</span>}
+            {/* A real bug, found live at 390px: a long active label (e.g.
+                "Credential requests") had nothing stopping it from
+                overflowing this column and running underneath the docked
+                centre button — `whitespace-nowrap` alone prevents
+                wrapping, not overflow. `min-w-0` on the Link (flex items
+                default to a content-based min-width that ignores
+                `overflow-hidden` otherwise) plus truncating the label
+                itself is what actually keeps it inside its own share of
+                the pill. */}
+            {active && <span className="truncate">{item.label}</span>}
           </Link>
         );
       })}

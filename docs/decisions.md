@@ -1415,3 +1415,52 @@ other floating element (`IterButton` 70, the splash overlay 60, `AppHeader` 20).
 `role="dialog"` either, but that screen isn't reachable from any current nav (Group B
 hasn't started) — left alone rather than fixed in isolation from that work.
 
+## 2026-08-27 (cont'd) — Debugging-pass fixes, batch 2
+
+**D-116. A real, and systemic, backend bug: a non-UUID `:id` route param crashed
+through to a raw 500 `{error:{code:"INTERNAL"}}` instead of the 404 the service code
+already intends.** Confirmed live on `POST /api/credentials/:id/decision` — the service
+layer already does `if (!credential) throw NOT_FOUND()`, but `repo.findCredentialById`'s
+own `eq(credentialRequest.id, id)` reaches Postgres first, and a `uuid` column rejects a
+non-UUID string at the driver level with its own error, before that check ever runs. No
+route anywhere in the backend validated an `:id` param's shape — this isn't specific to
+credentials, it's every `:id` route in the app. Built one shared middleware
+(`requireUuidParam`, `http/middleware/require-uuid-param.ts`) rather than a per-route
+fix, and applied it to every `:id`/`:subjectId`/`:markId` route whose param feeds a uuid
+column directly: both credentials routes, all five gradebook `:id` routes, and record's
+`:subjectId`/`:markId` routes. `auth`'s own `/sessions/:id` was checked and left alone —
+already verified live to return a clean 404, not touched since it isn't broken. Admin's
+`:id` routes have the identical gap but aren't reachable from any current nav; left for
+whenever that work actually starts. Verified: both a malformed id and a well-formed but
+nonexistent one now return `{"error":{"code":"NOT_FOUND"}}` at 404.
+
+**D-117. A real bug: a failed credential decide reverted the optimistic list update but
+left the confirm dialog open with zero indication anything had failed — a reviewer's
+click would just silently appear to do nothing.** `ReviewQueue.decide()`'s catch block
+only ever restored `items`; `decidingId` is only cleared on success, so the dialog
+correctly *stays* open on failure (that part was already right) — it just had nothing to
+show there. Added a `decideError` state, passed through as `DecisionDialog`'s new
+`error` prop, rendering the same shared `t.scr.err.body` string used elsewhere in this
+batch.
+
+**D-118. A real bug: at 390px, a long active pill-nav label (e.g. "Credential requests")
+overflowed its own column and ran underneath the docked centre button, rendering as
+"...redential requests".** `whitespace-nowrap` prevents wrapping, not overflow — nothing
+constrained the label's actual width. Fixed at both levels that needed it: `min-w-0` on
+the group wrapper (a CSS grid `1fr` track still sizes to its content's min-content width
+otherwise, regardless of what its own children do) and `min-w-0` + `truncate` on the
+link/label itself. Verified live: the active link's box (x 234–345.7) no longer overlaps
+the centre button's box (x 161–229) — a 5px gap — where it previously ran under it; the
+label now shows as "Credent…" rather than colliding.
+
+**D-119. Checked, not reproducible under stable conditions: the gradebook's reported
+"Mark is not defined" error and unpredictable rendering across reloads.** 8 consecutive
+fresh reloads, no concurrent file edits, produced identical output and zero console/page
+errors every time. The debugging agent that found this ran for ~45 minutes overlapping
+almost exactly with this session's own heaviest run of edits to shared files
+(`mark.tsx`, `tessera.css`, `app-shell.tsx`); its own report separately noted a
+"[Fast Refresh] performing full reload" log, which is what a dev server does when
+recompiling code out from under an active page — a strong sign the instability was the
+test observing its own target being edited live, not a defect in the gradebook's code
+itself. No fix applied; flagging instead of silently declaring it fixed.
+

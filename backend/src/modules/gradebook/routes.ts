@@ -3,6 +3,7 @@ import { asyncHandler } from "../../http/async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "../../http/errors.js";
 import { requireAuth } from "../../http/middleware/require-auth.js";
 import { requirePasswordChanged } from "../../http/middleware/require-password-changed.js";
+import { requireUuidParam } from "../../http/middleware/require-uuid-param.js";
 import {
   createAssessmentSchema,
   gradebookQuerySchema,
@@ -50,6 +51,7 @@ gradebookRouter.post(
 
 gradebookRouter.patch(
   "/assessments/:id",
+  requireUuidParam("id"),
   asyncHandler(async (req, res) => {
     const parsed = patchAssessmentSchema.safeParse(req.body);
     if (!parsed.success) throw VALIDATION_FAILED();
@@ -59,6 +61,7 @@ gradebookRouter.patch(
 
 gradebookRouter.delete(
   "/assessments/:id",
+  requireUuidParam("id"),
   asyncHandler(async (req, res) => {
     await service.deleteAssessment(auth(req), req.params.id);
     res.status(204).end();
@@ -76,6 +79,7 @@ gradebookRouter.put(
 
 gradebookRouter.delete(
   "/marks/:id",
+  requireUuidParam("id"),
   asyncHandler(async (req, res) => {
     await service.deleteMark(auth(req), req.params.id);
     res.status(204).end();
@@ -94,6 +98,7 @@ gradebookRouter.post(
 
 gradebookRouter.post(
   "/marks/:id/supersede",
+  requireUuidParam("id"),
   asyncHandler(async (req, res) => {
     const parsed = supersedeSchema.safeParse(req.body);
     if (!parsed.success) throw VALIDATION_FAILED();
@@ -103,6 +108,7 @@ gradebookRouter.post(
 
 gradebookRouter.get(
   "/marks/:id/history",
+  requireUuidParam("id"),
   asyncHandler(async (req, res) => {
     res.json(await service.getMarkHistory(auth(req), req.params.id));
   }),

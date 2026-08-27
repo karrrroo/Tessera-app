@@ -3,6 +3,7 @@ import { asyncHandler } from "../../http/async-handler.js";
 import { ApiError, VALIDATION_FAILED } from "../../http/errors.js";
 import { requireAuth } from "../../http/middleware/require-auth.js";
 import { requirePasswordChanged } from "../../http/middleware/require-password-changed.js";
+import { requireUuidParam } from "../../http/middleware/require-uuid-param.js";
 import { recordQuerySchema } from "./validation.js";
 import { getArchive, getMarkHistory, getRecord, getSubjectDetail } from "./service.js";
 
@@ -23,6 +24,7 @@ recordRouter.get(
 
 recordRouter.get(
   "/subjects/:subjectId",
+  requireUuidParam("subjectId"),
   asyncHandler(async (req, res) => {
     if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");
     const parsed = recordQuerySchema.safeParse(req.query);
@@ -41,6 +43,7 @@ recordRouter.get(
 
 recordRouter.get(
   "/marks/:markId/history",
+  requireUuidParam("markId"),
   asyncHandler(async (req, res) => {
     if (!req.auth) throw new ApiError(401, "UNAUTHENTICATED");
     res.json(await getMarkHistory(req.auth, req.params.markId));
