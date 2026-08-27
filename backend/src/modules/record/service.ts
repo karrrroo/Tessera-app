@@ -54,7 +54,7 @@ async function resolveEnrollmentOrThrow(userId: string) {
   return { student, enrollment: enr };
 }
 
-async function resolveTermOrThrow(academicYearId: string, requestedTermId?: string) {
+export async function resolveTermOrThrow(academicYearId: string, requestedTermId?: string) {
   const terms = await findTermsForYear(academicYearId);
   if (terms.length === 0) throw RECORD_TERM_NOT_FOUND();
   if (!requestedTermId) {
@@ -117,7 +117,11 @@ function buildSubjectMarks(rows: MarkRow[]): SubjectMark[] {
   return result.sort((a, b) => a.heldOn.localeCompare(b.heldOn));
 }
 
-async function buildSubjects(studentId: string, classId: string, academicYearId: string, termId: string) {
+// Exported for the admin student view (GET /api/admin/students/:id): an admin
+// looking at one student needs the same per-subject marks, averages and trends
+// a student sees on their own record. Duplicating that aggregation is how the
+// two drift apart, so the admin route calls straight into this.
+export async function buildSubjects(studentId: string, classId: string, academicYearId: string, termId: string) {
   const [assignments, markRows] = await Promise.all([
     findAssignmentsForClass(classId, academicYearId),
     findMarksForStudentTerm(studentId, termId),

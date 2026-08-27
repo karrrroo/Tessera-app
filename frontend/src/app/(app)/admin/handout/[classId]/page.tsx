@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useT } from "@/i18n/locale-provider";
 import { adminApi } from "@/lib/api/admin";
 
 type Credential = { studentId: string; fullName: string; login: string; temporaryPassword: string };
@@ -12,6 +13,7 @@ type Credential = { studentId: string; fullName: string; login: string; temporar
 // doing so, since the last-generated batch's own passwords are gone the
 // moment that browser tab is closed (S-2).
 export default function HandoutPage() {
+  const t = useT();
   const { classId } = useParams<{ classId: string }>();
   const [credentials, setCredentials] = useState<Credential[] | null>(null);
   const [skipped, setSkipped] = useState<{ studentId: string; code: string }[]>([]);
@@ -63,12 +65,12 @@ export default function HandoutPage() {
 
       {credentials && (
         <div className="handout-sheet bg-white p-8 text-black">
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full border-collapse text-sm" style={{ background: "var(--bg-base)" }}>
             <thead>
               <tr>
-                <th className="border border-black p-2 text-left">Name</th>
-                <th className="border border-black p-2 text-left">Login</th>
-                <th className="border border-black p-2 text-left">Temporary password</th>
+                <th className="border border-black p-2 text-left">{t.admin.colName}</th>
+                <th className="border border-black p-2 text-left">{t.admin.colLogin}</th>
+                <th className="border border-black p-2 text-left">{t.admin.colTempPassword}</th>
               </tr>
             </thead>
             <tbody>

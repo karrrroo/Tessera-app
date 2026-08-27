@@ -35,6 +35,18 @@ const schema = z.object({
     .min(32, "SCANNER_API_KEY must be at least 32 characters"),
   // Phase 11 (Iter) — Gemini API key for generating real replies.
   GOOGLE_AI_API_KEY: z.string({ required_error: "GOOGLE_AI_API_KEY is required (see .env.example)" }).min(1),
+  // Group B (admissions) — gates the "Apply for admission" link on the login
+  // screen. Default false, and deliberately not a required variable: an
+  // existing deployment that never sets it stays closed rather than silently
+  // starting to accept applications about children on upgrade.
+  //
+  // /apply itself stays reachable either way (it shows a localised closed
+  // state when this is false), so a shared link or a QR code keeps working
+  // and the closed message is what an applicant sees instead of a 404.
+  APPLICATIONS_OPEN: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 function loadEnv() {

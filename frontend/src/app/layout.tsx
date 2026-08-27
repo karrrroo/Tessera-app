@@ -9,7 +9,6 @@ import { ThemeProvider } from "@/state/theme-provider";
 import { BackgroundProvider } from "@/state/background-provider";
 import { AccentProvider } from "@/state/accent-provider";
 import { OnlineProvider } from "@/state/online-provider";
-import { LayoutModeProvider } from "@/state/layout-mode-provider";
 import { IdShellPrecache } from "@/components/id/id-shell-precache";
 
 const geistSans = Geist({
@@ -60,9 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <AccentProvider>
               <LocaleProvider initialLocale={initialLocale}>
                 <OnlineProvider>
-                  <LayoutModeProvider>
-                    <AuthProvider>{children}</AuthProvider>
-                  </LayoutModeProvider>
+                  <AuthProvider>{children}</AuthProvider>
                 </OnlineProvider>
               </LocaleProvider>
             </AccentProvider>

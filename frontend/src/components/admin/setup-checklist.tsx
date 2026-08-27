@@ -49,7 +49,7 @@ export function SetupChecklist() {
   if (!items) return null;
 
   return (
-    <ul className="max-w-xl divide-y divide-hair border border-hair">
+    <ul className="glass-admin max-w-xl divide-y divide-hair rounded-2xl">
       {items.map((item) => (
         <li key={item.href}>
           <Link href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-panel">
@@ -66,7 +66,7 @@ export function SetupChecklist() {
               </span>
               <span style={{ color: "var(--ink)" }}>{t.admin[item.labelKey]}</span>
             </div>
-            <span className="text-xs" style={{ color: "var(--ink-3)" }}>
+            <span className="text-xs" style={{ color: "var(--ink-2)" }}>
               {item.detail}
             </span>
           </Link>

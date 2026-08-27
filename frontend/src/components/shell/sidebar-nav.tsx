@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { NavItem } from "./nav-items";
+import { useT } from "@/i18n/locale-provider";
 import { NavIcon } from "./nav-icon";
 
 const EXPANDED_WIDTH = 232;
@@ -14,6 +15,7 @@ const COLLAPSED_WIDTH = 68;
 // edge, half-overlapping the border.
 export function SidebarNav({ items, open, onToggle }: { items: NavItem[]; open: boolean; onToggle: () => void }) {
   const pathname = usePathname();
+  const t = useT();
   const width = open ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
 
   return (
@@ -24,7 +26,7 @@ export function SidebarNav({ items, open, onToggle }: { items: NavItem[]; open: 
     // underneath it. The content area already reserves this same 64px via
     // its own `pt-16`; the sidebar needs the identical offset.
     <nav
-      className="fixed left-0 top-16 z-10 flex h-[calc(100vh-4rem)] flex-col border-r border-hair bg-panel py-4 transition-[width] duration-200"
+      className="glass-admin fixed left-0 top-16 z-10 flex h-[calc(100vh-4rem)] flex-col border-r border-hair py-4 transition-[width] duration-200"
       style={{ width, transitionTimingFunction: "var(--ease-out)" }}
     >
       <ul className="flex flex-1 flex-col gap-1 px-2">
@@ -53,7 +55,7 @@ export function SidebarNav({ items, open, onToggle }: { items: NavItem[]; open: 
       <button
         type="button"
         onClick={onToggle}
-        aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+        aria-label={open ? t.common.collapseSidebar : t.common.expandSidebar}
         className="absolute -right-[11px] top-8 flex h-[22px] w-[22px] items-center justify-center rounded-full border border-hair bg-raised"
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--ink-2)" }}>

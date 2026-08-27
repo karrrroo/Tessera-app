@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/state/auth-provider";
 import { useLocale, useT } from "@/i18n/locale-provider";
+import { termLabel } from "@/i18n/term-label";
 import { gradebookApi, type TeacherClass } from "@/lib/api/gradebook";
 import { adminApi, type AcademicYear, type SchoolClass, type Subject, type Term } from "@/lib/api/admin";
 import { downloadExport, type ExportFormat, type ExportScope } from "@/lib/api/export";
@@ -178,7 +179,7 @@ function AdminExportForm() {
         <select value={termId} onChange={(e) => setTermId(e.target.value)} className="rounded-2xl border px-3 py-2 text-sm" style={{ borderColor: "var(--hair)", background: "var(--surface2)", color: "var(--ink)" }}>
           {(terms ?? []).map((term) => (
             <option key={term.id} value={term.id}>
-              {term.label}
+              {termLabel(term, t)}
             </option>
           ))}
         </select>

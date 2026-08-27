@@ -1909,3 +1909,165 @@ The search matches what the code renders (`Акобян` returns 7 students, `А
 which is the correct behaviour for a search — it must agree with what is on screen. Whether
 `բ` should render as `п` in Russian personal names is a transliteration-policy decision, not
 mine to make, and changing it would move every Russian-rendered surname in the product.
+
+**D-155. Group B (admissions) is built, and two of its DONE-WHEN items are blocked on a
+CREATE TABLE that is the user's to run.** `\dt` returns 22 tables and `application` is not
+among them, so `docs/reference/tessera-schema-application.sql` was handed over rather than
+applied: the user's DDL verbatim, plus two clearly-marked optional additions (a check
+constraint on `status`, because every other status column in this schema is a constrained enum
+type and plain text loses that guarantee; and an index on `(lower(email), created_at desc)`,
+because B4's per-email rate limit queries a time window that the partial `where status =
+'pending'` unique index cannot serve). Three divergences from house style were reported and
+left as specified: `decided_by` is `decided_by_user_id` everywhere else, `email` is `text` where
+`"user".email` is `citext` (correct here, since the unique index is on `lower(email)`), and
+there is no `updated_at` (`decided_at` records the only mutation).
+
+Per B1, `schema:check` was updated to EXPECT the table rather than tolerate its absence, so it
+now fails with two lines naming the file to apply. It also checks the table by shape — all
+fourteen columns, their types and nullability, and both required indexes — because a table
+count alone would go green again if any unrelated table were added while this one was still
+missing. The optional check constraint is reported, not failed, since it was optional.
+
+**D-156. `APPLICATIONS_OPEN` is read from the backend by the frontend, not duplicated as a
+second frontend environment variable.** B3 requires that when applications are closed the login
+link is "not rendered server-side at all", which makes it a server-side decision, and the
+obvious implementation is a second copy of the flag in the frontend alongside
+`SHOW_DEMO_CREDENTIALS`. That was rejected: two copies of one flag can disagree, and the failure
+mode of disagreeing is a visible "Apply for admission" link leading to an endpoint that rejects
+every submission — a form that takes a child's data and drops it, which is precisely what B2
+says is worse than a disabled button. So `login/page.tsx` and `apply/page.tsx` both ask
+`GET /api/applications/status` at render, with `cache: "no-store"`, and treat an unreachable
+backend as closed. Verified at the source level: the login HTML contains `href="/apply"` zero
+times when closed and twice when open (twice because `cardBody` renders in both the desktop and
+mobile layouts, which is the existing CSS-media-query pattern from A2, not a duplicate link).
+
+**D-157. The rate limit is real, enforced on two keys, and honestly described.** B4 asked for
+"3 per hour per IP and per email... Make it real, not a comment." It is enforced on both keys
+independently, because either alone is trivially defeated — per-IP by a phone changing networks,
+per-email by inventing an address per attempt. It also checks all keys before recording against
+any of them: recording as it goes would charge the IP for an attempt the email limit then
+rejected, so a blocked address would burn an innocent one's quota. There are two layers: an
+in-memory window (like Iter's own limiter) and a durable `count(*)` over `application` inside
+the hour, so the per-email limit survives a redeploy. The in-memory map is capped at 20,000
+keys so a flood of distinct keys cannot turn the limiter itself into the denial of service.
+
+The honest description of this control is "raises the cost of casual abuse", not "prevents
+abuse": the in-memory half resets on restart and does not coordinate across instances, and a
+shared counter would need Redis, which D-4 already declined to add. `req.ip` is deliberately not
+used — behind a load balancer without `trust proxy` it is the balancer's address, which would
+put every applicant on earth in one bucket and lock the form globally after three submissions.
+`X-Forwarded-For` is read explicitly and the RIGHTMOST entry is taken, because the header is
+client-appendable and only the entries the infrastructure itself appended can be believed.
+**There is no captcha.** Adding one means choosing a third-party service that would see traffic
+from a page about children, which is a Q7 decision, not an implementation detail.
+
+**D-158. The transcript is reachable only through a signed, short-lived token, and the storage
+key never leaves the backend.** `toAdminView()` strips `transcript_key` from every row that goes
+to a client and substitutes `applicationId.expiry.HMAC`, valid for five minutes. The endpoint
+that accepts it is *still* admin-only: the signature bounds the link's lifetime, it does not
+replace authentication. C10 is intact — no presigned URL reaches a browser and every byte
+streams through the backend, which is why the frontend downloads it as an authenticated blob
+rather than an `<a href>` (the same 401 trap the import-template link fell into, D-143). The
+signing key is derived from `RESET_SECRET` with a labelled HMAC rather than being a new
+environment variable, so deploying this needs no new secret from anyone, and standard key
+separation means a transcript token can never be replayed as a password-reset token. Responses
+also carry `Cache-Control: no-store, private`.
+
+**D-159. Approve does not create an account, and the prefill travels as query parameters.**
+B5 is explicit, and the trust model is the reason: accounts are created by the institution,
+deliberately. `POST /approve` marks the row approved, writes an audit entry and returns a
+prefill payload with `accountCreated: false`; the frontend then navigates to the EXISTING
+`/admin/students/new` with `firstName`, `lastName`, `birthDate` and `email` in the URL. Query
+parameters rather than a second API path because there must not be two ways to create a student.
+`classId` is deliberately **not** prefillable — an applicant has no class yet, and that is the
+one decision this form must not make on an admin's behalf. Both decisions require an
+`Idempotency-Key` and are stored in `audit_log.after`, the pattern the credentials and gradebook
+flows already use, since the frozen schema has no column for it. The status guard lives in the
+UPDATE's WHERE clause, not in a read-then-write, so two admins clicking approve and reject at
+the same moment cannot both succeed. A rejection reason is recorded in the audit log rather than
+on the row, because `application` has no `decision_reason` column and C2 forbids adding one.
+Nothing is ever sent to the applicant: there is no code path that could contact anybody.
+
+**D-160. Deletion removes the row first and the stored object second.** If the object delete
+fails, the admin can retry the action; deleting the object first and then failing on the row
+would leave a row pointing at nothing, indistinguishable from a row that never had a transcript.
+The deletion itself is audit-logged with no name, email or key copied into it. Delete is offered
+only once a decision exists, so a pending application about a child cannot be destroyed before
+anyone has looked at it. Note that "the R2 object" in the brief is the local-disk storage
+adapter here: D-4 declined Cloudflare and MinIO, and the same `StorageProvider` interface stands
+in. **The DONE-WHEN item "verified in R2" cannot be verified in R2 because there is no R2.**
+
+**D-161. Minors' data: Q7 and Q10 now block real use of this feature, not just Iter.** Stated
+plainly, as B6 asks. `application` holds names, dates of birth, contact details and uploaded
+school records belonging to children who are **not yet students of this school** — a heavier
+obligation than anything else in this product, because there is not even an enrolment
+relationship to justify holding it. Q7 (data residency for minors) and Q10 (retention) were
+already open for Iter; with this table they are open for a second, larger body of data, and both
+are business/legal decisions this build cannot make. Concretely: nothing in the code deletes an
+application on any schedule, so without a stated retention policy these rows accumulate
+indefinitely. What the code does guarantee: the transcript is never logged, never in an error
+payload (validation failures return field *paths*, never values) and never reachable without a
+signed key; nothing about an applicant goes to analytics or any third party; and a rejected
+application is hard-deletable in one action including its file.
+
+**D-162. Applicant names are shown exactly as submitted, never transliterated.** The admin
+queue does not run them through `transliterateName`. An applicant is not yet a student of this
+school and their own spelling of their own name is the only authority that exists for it —
+unlike an enrolled student, whose name is stored in Armenian by the institution precisely so it
+can be rendered per locale (D-152's whole premise).
+
+**D-163. `.glass-panel` now actually blurs, closing D-130/D-139.** It declared both
+`backdrop-filter` and `-webkit-backdrop-filter` inside ONE `@supports` block; Lightning CSS
+deduplicates that down to the `-webkit-` form alone, and Chromium does not implement the
+prefixed property, so the class specified glass and produced none. Split into two separate
+`@supports` blocks, the fix `.glass-admin` already carried with this exact rationale. It was
+fixed now rather than left waiting on a decision because B4 *requires* a glass card on `/apply`
+and the design already specified the effect everywhere else — making a specified effect work is
+a bug fix, not a design change.
+
+Verified as an effect rather than a declaration, since the last attempt at glass was correctly
+declared and completely inert. The mesh behind these panels carries grain, so a working blur
+must attenuate it: neighbouring-pixel luminance standard deviation, inside the `/apply` card
+versus the gutter beside it, is **0.170 vs 1.566 in dark (89.2% attenuated)** and **0.060 vs
+1.113 in light (94.6%)**. Contrast on the composited surface still passes AA — the `/apply`
+heading measures 7.02:1 dark and 14.18:1 light — and an A/B of the login screen's support line
+with the blur forced off versus on gives 12.88:1 vs 12.88:1 at 390px and 8.33:1 vs 8.00:1 at
+1440px, so the restored blur moves contrast by at most 0.33 and nothing lands near the 4.5
+threshold. Recorded because this is a visible change to an existing screen: the login card, the
+`/apply` card and the sheets blur for the first time.
+
+**D-164. A false alarm worth recording, because the same mistake has now happened twice.** A
+first pass at the login-screen contrast regression reported the support line at 3.14:1 in dark
+at 390px, below AA. It was not: the measurement sampled a strip 8px below each element's
+*vertical centre*, which for 13px text lands inside the glyphs, so it was measuring text against
+text. Sampling below the text's own bounding box gives 12.88:1. This is the identical error as
+the earlier "possible edge at 172/255" that turned out to be a sample line crossing UI content.
+The rule that follows: when a contrast measurement is surprising, check where the sample landed
+before believing the number.
+
+**D-165. `/apply` makes no authenticated call of its own, but the app shell's boot-time refresh
+still fires there.** B4 says "no call requiring auth", and `/apply` itself makes exactly one
+request, `POST /api/applications`, unauthenticated. The `401 POST /api/auth/refresh` visible in
+the console is `AuthProvider`'s silent session bootstrap, mounted in the root layout, and it
+fires identically on `/login` — it is pre-existing and not specific to this page. Left alone
+deliberately: skipping it when `tessera.hasAuthedBefore` is unset would silence the 401, but a
+real refresh cookie can outlive cleared localStorage, and skipping the probe in that case would
+silently log a legitimate user out. Reported rather than changed.
+
+**D-166. What group B's DONE-WHEN could and could not be verified.** Passing now, measured:
+`/apply` works in a private window (every Playwright context is a fresh one) across three
+locales, both themes and 390/1440 with zero page overflow and no console errors beyond D-165's
+401; a non-main school disables submit and shows a localised explanation, and the API refuses it
+independently with `APPLICATION_SCHOOL_NOT_ACCEPTING` even if a client submits anyway; a 10 MB
+file is refused with `APPLICATION_FILE_TOO_LARGE` (413) and an `.exe` renamed `.pdf` with
+`APPLICATION_FILE_TYPE_INVALID` (415, sniffed as `application/x-msdownload`); a 4 MB valid PDF
+passes both file checks; server-side validation rejects a bad email, a missing name, the
+impossible date `2010-13-45`, an over-length motivation and an unknown school; and student,
+teacher and anonymous callers all get `FORBIDDEN`/`UNAUTHENTICATED` on the admin endpoints.
+Nine of nine testable assertions passed with zero failures.
+
+Blocked on the CREATE TABLE, and therefore NOT verified: a PDF submission reaching the queue,
+the fourth submission in an hour returning `RATE_LIMITED`, approve opening the prefilled form
+with no account created, and reject-then-delete removing the row and the object. The code paths
+exist and typecheck; every one of them currently returns 500 because `application` does not
+exist. They are listed here as unverified rather than described as working.

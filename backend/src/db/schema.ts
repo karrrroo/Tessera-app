@@ -518,3 +518,38 @@ export const auditLog = pgTable("audit_log", {
 			name: "audit_log_actor_user_id_fkey"
 		}),
 ]);
+
+// Admissions applications (group B). Personal data about children who are
+// NOT yet students of this school, which is a heavier obligation than
+// anything else in this schema — see docs/decisions.md on Q7 and Q10, both
+// of which block real use of this feature.
+//
+// `schoolChoice` is plain text on purpose: there is no `school` table and
+// none is being created, so the choice is stored as the name that was
+// offered, not as a foreign key. `status` is text rather than a new enum
+// because the DDL handed over for review specified text; a check constraint
+// carries the same guarantee.
+export const application = pgTable("application", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	firstName: text("first_name").notNull(),
+	lastName: text("last_name").notNull(),
+	birthDate: date("birth_date").notNull(),
+	email: text().notNull(),
+	phone: text(),
+	schoolChoice: text("school_choice").notNull(),
+	streamChoice: text("stream_choice").notNull(),
+	motivation: text(),
+	transcriptKey: text("transcript_key"),
+	status: text().default('pending').notNull(),
+	decidedAt: timestamp("decided_at", { withTimezone: true, mode: 'string' }),
+	decidedBy: uuid("decided_by"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.decidedBy],
+			foreignColumns: [user.id],
+			name: "application_decided_by_fkey"
+		}),
+	index("application_status_created_idx").on(table.status, table.createdAt.desc()),
+	check("application_status_check", sql`status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])`),
+]);

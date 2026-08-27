@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/i18n/locale-provider";
 import { adminApi, type Subject } from "@/lib/api/admin";
 
 export default function SubjectsPage() {
+  const t = useT();
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
   const [newRow, setNewRow] = useState({ nameHy: "", nameEn: "", nameRu: "", code: "" });
 
@@ -45,15 +47,15 @@ export default function SubjectsPage() {
   return (
     <main className="mx-auto w-full max-w-3xl space-y-4 p-8">
       <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-        Subjects
+        {t.admin.subjects}
       </h1>
-      <table className="w-full border border-hair text-sm">
+      <table className="w-full border border-hair text-sm" style={{ background: "var(--bg-base)" }}>
         <thead>
           <tr className="border-b border-hair" style={{ color: "var(--ink-3)" }}>
-            <th className="p-2 text-left">Armenian</th>
-            <th className="p-2 text-left">English</th>
-            <th className="p-2 text-left">Russian</th>
-            <th className="p-2 text-left">Code</th>
+            <th className="p-2 text-left">{t.admin.colNameHy}</th>
+            <th className="p-2 text-left">{t.admin.colNameEn}</th>
+            <th className="p-2 text-left">{t.admin.colNameRu}</th>
+            <th className="p-2 text-left">{t.admin.colCode}</th>
             <th className="w-10" />
           </tr>
         </thead>
@@ -79,7 +81,7 @@ export default function SubjectsPage() {
           ))}
           <tr style={{ color: "var(--ink)" }}>
             <td className="p-0">
-              <input value={newRow.nameHy} onChange={(e) => setNewRow((f) => ({ ...f, nameHy: e.target.value }))} placeholder="+ new subject" className={cellClass} />
+              <input value={newRow.nameHy} onChange={(e) => setNewRow((f) => ({ ...f, nameHy: e.target.value }))} placeholder={t.admin.newSubject} className={cellClass} />
             </td>
             <td className="p-0">
               <input value={newRow.nameEn} onChange={(e) => setNewRow((f) => ({ ...f, nameEn: e.target.value }))} className={cellClass} />
@@ -92,7 +94,7 @@ export default function SubjectsPage() {
             </td>
             <td>
               <button onClick={addRow} className="px-2 text-xs" style={{ color: "var(--ok)" }}>
-                Add
+                {t.admin.add}
               </button>
             </td>
           </tr>

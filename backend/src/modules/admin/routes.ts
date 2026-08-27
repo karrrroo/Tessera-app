@@ -9,6 +9,7 @@ import { requirePasswordChanged } from "../../http/middleware/require-password-c
 import { ApiError, sendApiError, VALIDATION_FAILED } from "../../http/errors.js";
 import * as service from "./service.js";
 import * as repo from "./repo.js";
+import { clampLimit, clampOffset } from "./search.js";
 import {
   institutionPatchSchema,
   academicYearCreateSchema,
@@ -217,7 +218,34 @@ adminRouter.get(
   asyncHandler(async (req: Request, res: Response) => {
     const classId = typeof req.query.classId === "string" ? req.query.classId : undefined;
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
-    res.json(await service.listRoster(req.institutionId!, { classId, status }));
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    res.json(await service.listRoster(req.institutionId!, { classId, status, q }));
+  }),
+);
+
+// The admin people-search. Ranked, paged, and empty for a query under two
+// characters — see search.ts. Registered BEFORE "/students/:id" so the
+// literal path is not captured by the :id parameter.
+adminRouter.get(
+  "/students",
+  asyncHandler(async (req: Request, res: Response) => {
+    const q = typeof req.query.q === "string" ? req.query.q : "";
+    res.json(
+      await service.searchStudents(req.institutionId!, {
+        q,
+        limit: clampLimit(req.query.limit),
+        offset: clampOffset(req.query.offset),
+      }),
+    );
+  }),
+);
+
+// One student, with marks — the admin search result's destination.
+adminRouter.get(
+  "/students/:id",
+  asyncHandler(async (req: Request, res: Response) => {
+    const termId = typeof req.query.termId === "string" ? req.query.termId : undefined;
+    res.json(await service.getStudentDetail(req.institutionId!, req.params.id, termId));
   }),
 );
 
@@ -241,8 +269,28 @@ adminRouter.patch(
 
 // --- Assignments ---
 
+// Teacher search. Matches names, login, external id and SUBJECT NAME, and
+// each hit carries what that teacher teaches. Shape changed from a bare array
+// to { items, total } — the assignment grid's own call site is updated to match.
 adminRouter.get(
   "/teachers",
+  asyncHandler(async (req: Request, res: Response) => {
+    const q = typeof req.query.q === "string" ? req.query.q : "";
+    res.json(
+      await service.searchTeachers(req.institutionId!, {
+        q,
+        limit: clampLimit(req.query.limit),
+        offset: clampOffset(req.query.offset),
+      }),
+    );
+  }),
+);
+
+// The assignment grid needs every teacher, unfiltered — a separate path from
+// search so that no query string can ever make the search endpoint return an
+// unfiltered roster.
+adminRouter.get(
+  "/teachers/all",
   asyncHandler(async (req: Request, res: Response) => {
     res.json(await service.listTeachers(req.institutionId!));
   }),

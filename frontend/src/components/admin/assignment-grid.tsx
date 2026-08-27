@@ -75,7 +75,7 @@ export function AssignmentGrid({
           </button>
         </div>
       )}
-      <div className="overflow-auto border border-hair" style={{ maxHeight: 560 }}>
+      <div className="overflow-auto border border-hair" style={{ maxHeight: 560, background: "var(--bg-base)" }}>
       <table className="border-collapse text-sm">
         <thead>
           <tr>

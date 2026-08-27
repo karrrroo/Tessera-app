@@ -9,7 +9,6 @@ import { ApiRequestError } from "@/lib/api/client";
 import { PasswordField } from "@/components/auth/password-field";
 import { LanguagePill } from "@/components/auth/language-pill";
 import { DemoRow } from "@/components/auth/demo-row";
-import { WebMobileSwitch } from "@/components/shell/web-mobile-switch";
 import { GradientMesh } from "@/components/design/gradient-mesh";
 import { Glass } from "@/components/design/glass";
 import { GlassLayered } from "@/components/design/glass-layered";
@@ -36,7 +35,7 @@ function errorMessage(err: unknown, t: ReturnType<typeof useLocale>["t"]): strin
 // vars reach the browser bundle) — passed down as a plain boolean so the
 // decision of whether the row exists at all is made before this ever
 // reaches the client, not hidden from it afterward.
-export function LoginView({ showDemo }: { showDemo: boolean }) {
+export function LoginView({ showDemo, applicationsOpen }: { showDemo: boolean; applicationsOpen: boolean }) {
   const { t } = useLocale();
   const { login, status, user } = useAuth();
   const router = useRouter();
@@ -150,6 +149,21 @@ export function LoginView({ showDemo }: { showDemo: boolean }) {
         {t.auth.support}
       </p>
 
+      {/* B3: below the support line, --ink-3, 13px, a LINK and not a button,
+          because it must not compete with sign-in. The login screen states
+          that accounts are created by the institution, so a prominent
+          Register control would contradict the screen it sits on; admission
+          is also seasonal, which is why this is gated at all. Rendered only
+          when the backend says applications are open — when it does not, this
+          is absent from the server-rendered HTML rather than hidden. */}
+      {applicationsOpen && (
+        <p className="text-center">
+          <Link href="/apply" className="text-[13px] underline underline-offset-2" style={{ color: "var(--ink-3)" }}>
+            {t.apply.loginLink}
+          </Link>
+        </p>
+      )}
+
       {showDemo && (
         <div
           className="space-y-2 border-t border-hair pt-4"
@@ -164,10 +178,6 @@ export function LoginView({ showDemo }: { showDemo: boolean }) {
   return (
     <div className="relative h-screen overflow-hidden bg-base">
       <OpeningOverlay phase={phase} targetRefs={markTargetRefs} />
-
-      <div className="absolute right-4 top-4 z-20" style={cardStyle}>
-        <WebMobileSwitch />
-      </div>
 
       {/* Desktop (≥900px): one continuous full-bleed mesh — not two columns
           joined at a seam. This overrides the base brief's §8bis ("right 48%

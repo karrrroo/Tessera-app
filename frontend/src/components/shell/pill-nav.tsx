@@ -67,7 +67,7 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
   );
 
   return (
-    <div className="pointer-events-none absolute inset-x-4 bottom-[calc(14px+env(safe-area-inset-bottom))]">
+    <div className="pointer-events-none fixed inset-x-4 bottom-[calc(14px+env(safe-area-inset-bottom))] z-[60] desktop:hidden">
       <GlassLayered radius={999} className="pointer-events-auto h-[58px]">
         <div className="grid h-[58px] items-center" style={{ gridTemplateColumns: "1fr 78px 1fr" }}>
           {renderGroup(left)}

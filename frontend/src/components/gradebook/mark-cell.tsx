@@ -11,6 +11,7 @@ type MarkCellProps = {
   isDraft: boolean;
   isPublished: boolean;
   hasHistory: boolean;
+  historyLabel: string;
   isFocused: boolean;
   onFocus: (pos: GradebookPosition) => void;
   onKeyDown: (e: React.KeyboardEvent, pos: GradebookPosition) => void;
@@ -25,7 +26,7 @@ type MarkCellProps = {
 // read in here either; everything arrives as props from one subscribing
 // parent row.
 export const MarkCell = memo(
-  function MarkCell({ pos, value, pendingValue, isDraft, isPublished, hasHistory, isFocused, onFocus, onKeyDown, onCorrect, onHistory, cellRef }: MarkCellProps) {
+  function MarkCell({ pos, value, pendingValue, isDraft, isPublished, hasHistory, historyLabel, isFocused, onFocus, onKeyDown, onCorrect, onHistory, cellRef }: MarkCellProps) {
     const displayValue = pendingValue ?? value;
     const bg = displayValue === null ? "var(--surface2)" : gradeColorVar(displayValue);
 
@@ -59,7 +60,7 @@ export const MarkCell = memo(
         {hasHistory && (
           <span
             role="button"
-            aria-label="history"
+            aria-label={historyLabel}
             onClick={(e) => {
               e.stopPropagation();
               onHistory?.(pos);

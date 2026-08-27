@@ -19,6 +19,7 @@ export type GradebookGridProps = {
   studentLabel: string;
   addColumnLabel: string;
   avgLabel: string;
+  historyLabel: string;
 };
 
 // GB-11: a pinned student-name column and a pinned header row, both via
@@ -37,6 +38,7 @@ export function GradebookGrid({
   studentLabel,
   addColumnLabel,
   avgLabel,
+  historyLabel,
 }: GradebookGridProps) {
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
 
@@ -123,6 +125,7 @@ export function GradebookGrid({
                     isDraft={mark?.state === "draft"}
                     isPublished={mark?.state === "published"}
                     hasHistory={mark?.hasHistory ?? false}
+                    historyLabel={historyLabel}
                     isFocused={isFocused}
                     onFocus={focusCell}
                     onKeyDown={handleKeyDown}

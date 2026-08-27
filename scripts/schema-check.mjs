@@ -22,7 +22,11 @@ const client = new pg.Client({
   ssl: isLocalHost ? false : { rejectUnauthorized: true },
 });
 
-const EXPECTED_TABLE_COUNT = 22;
+// 23, not 22: group B adds `application`. Per B1 this check EXPECTS the new
+// table rather than being relaxed to tolerate its absence — so until
+// docs/reference/tessera-schema-application.sql has been applied by hand,
+// schema:check fails here, on purpose, and that failure is the reminder.
+const EXPECTED_TABLE_COUNT = 23;
 const EXPECTED_ENUMS = {
   user_role: ["student", "teacher", "admin"],
   locale_code: ["hy", "en", "ru"],
@@ -61,6 +65,71 @@ try {
     ok(`${tableCount} tables in public schema`);
   } else {
     fail(`expected ${EXPECTED_TABLE_COUNT} tables, found ${tableCount}`);
+  }
+
+  // The `application` table (group B), checked by name and by shape rather
+  // than only by the count above — a count alone would go green again if some
+  // unrelated table were added while this one was still missing.
+  const { rows: appRows } = await client.query(
+    `select column_name, data_type, is_nullable
+       from information_schema.columns
+      where table_schema = 'public' and table_name = 'application'
+      order by ordinal_position`,
+  );
+  if (appRows.length === 0) {
+    fail(
+      "table `application` is missing — apply docs/reference/tessera-schema-application.sql " +
+        "by hand in the Neon SQL editor (additive, no DROP). Group B's admissions queue " +
+        "cannot read or write until it exists.",
+    );
+  } else {
+    const byName = new Map(appRows.map((r) => [r.column_name, r]));
+    const EXPECTED_APPLICATION_COLUMNS = [
+      ["id", "uuid", "NO"],
+      ["first_name", "text", "NO"],
+      ["last_name", "text", "NO"],
+      ["birth_date", "date", "NO"],
+      ["email", "text", "NO"],
+      ["phone", "text", "YES"],
+      ["school_choice", "text", "NO"],
+      ["stream_choice", "text", "NO"],
+      ["motivation", "text", "YES"],
+      ["transcript_key", "text", "YES"],
+      ["status", "text", "NO"],
+      ["decided_at", "timestamp with time zone", "YES"],
+      ["decided_by", "uuid", "YES"],
+      ["created_at", "timestamp with time zone", "NO"],
+    ];
+    let shapeOk = true;
+    for (const [name, type, nullable] of EXPECTED_APPLICATION_COLUMNS) {
+      const col = byName.get(name);
+      if (!col) {
+        fail(`application.${name} is missing`);
+        shapeOk = false;
+      } else if (col.data_type !== type || col.is_nullable !== nullable) {
+        fail(`application.${name} should be ${type} null=${nullable}, found ${col.data_type} null=${col.is_nullable}`);
+        shapeOk = false;
+      }
+    }
+    if (shapeOk) ok(`application has all ${EXPECTED_APPLICATION_COLUMNS.length} expected columns`);
+
+    // The partial unique index is a product rule, not a nicety: it is what
+    // stops one email address filing two pending applications at once.
+    const { rows: idx } = await client.query(
+      `select indexname from pg_indexes where schemaname = 'public' and tablename = 'application'`,
+    );
+    const names = idx.map((r) => r.indexname);
+    for (const required of ["application_status_created_idx", "application_pending_email_idx"]) {
+      if (names.includes(required)) ok(`index ${required} exists`);
+      else fail(`index ${required} is missing on application`);
+    }
+
+    // Optional in the handed-over DDL, so this reports rather than fails.
+    const { rows: chk } = await client.query(
+      `select conname from pg_constraint where conname = 'application_status_check'`,
+    );
+    if (chk.length > 0) ok("constraint application_status_check exists");
+    else console.log("NOTE: application_status_check was not applied (it was optional) — status is unconstrained text");
   }
 
   for (const [enumName, expectedValues] of Object.entries(EXPECTED_ENUMS)) {

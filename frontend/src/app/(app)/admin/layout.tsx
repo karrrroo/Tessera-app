@@ -2,6 +2,7 @@
 
 import { notFound } from "next/navigation";
 import { useAuth } from "@/state/auth-provider";
+import { AdminAmbient } from "@/components/admin/admin-ambient";
 
 // roadmap Phase 5: "A student hitting /admin sees the not-found screen, not
 // a redirect that reveals the route exists." notFound() renders the nearest
@@ -11,5 +12,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!user || user.role !== "admin") {
     notFound();
   }
-  return <>{children}</>;
+  return (
+    <>
+      <AdminAmbient />
+      {children}
+    </>
+  );
 }

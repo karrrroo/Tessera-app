@@ -10,6 +10,7 @@ import { gradebookRouter } from "../modules/gradebook/routes.js";
 import { iterRouter } from "../modules/iter/routes.js";
 import { exportRouter } from "../modules/export/routes.js";
 import { credentialsRouter } from "../modules/credentials/routes.js";
+import { publicApplicationsRouter, adminApplicationsRouter } from "../modules/applications/routes.js";
 import { requireAuth } from "./middleware/require-auth.js";
 import { requirePasswordChanged } from "./middleware/require-password-changed.js";
 import { asyncHandler } from "./async-handler.js";
@@ -50,7 +51,17 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
+  // /api/admin/applications (group B5). Mounted BEFORE adminRouter and scoped
+  // to its own prefix, so adminRouter's own guards (requireAuth,
+  // requirePasswordChanged, requireAdmin, plus an institution lookup that
+  // costs a query) do not run twice for every request in this subtree.
+  app.use("/api/admin/applications", adminApplicationsRouter);
   app.use("/api/admin", adminRouter);
+  // /api/applications and /api/applications/status (group B4) — the only
+  // UNAUTHENTICATED endpoints in the product that write to the database.
+  // Mounted with no guard middleware in front of it on purpose; every check
+  // lives inside the route, where it can return a real error code.
+  app.use("/api", publicApplicationsRouter);
   // /api/me/credential, /api/me/today, /api/verify, /api/verify/anomalies
   // (roadmap Phase 6) — mounted at /api, not /api/me, since it also owns
   // the /api/verify* paths.

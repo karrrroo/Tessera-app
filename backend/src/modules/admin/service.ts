@@ -4,7 +4,10 @@ import { student, teacher, user, enrollment, importBatch, schoolClass, teachingA
 import { ApiError, NOT_FOUND, VALIDATION_FAILED } from "../../http/errors.js";
 import { hashPassword } from "../auth/password.js";
 import { generateTemporaryPassword } from "./temp-password.js";
+import { buildSubjects, resolveTermOrThrow } from "../record/service.js";
+import { findTermsForYear } from "../record/repo.js";
 import * as repo from "./repo.js";
+import * as search from "./search.js";
 import * as xlsx from "./xlsx.js";
 import { validateStudentRow, validateTeacherRow, type RowValidation } from "./import-validation.js";
 import { GENERATE_RANGE_MAX, IMPORT_MAX_ROWS, IMPORT_PREVIEW_TTL_HOURS } from "./validation.js";
@@ -134,8 +137,100 @@ export async function generateClasses(institutionId: string, data: { academicYea
 
 // --- Roster ---
 
-export async function listRoster(institutionId: string, filters: { classId?: string; status?: string }) {
+export async function listRoster(
+  institutionId: string,
+  filters: { classId?: string; status?: string; q?: string },
+) {
   return repo.listRoster(institutionId, filters);
+}
+
+// The admin-side counterpart of GET /api/me/record: one student's marks for
+// one term, plus enough identity to be sure it is the right student. The
+// per-subject aggregation is record/service's `buildSubjects`, called rather
+// than reimplemented, so what an admin reads and what the student reads can
+// never disagree.
+export async function getStudentDetail(institutionId: string, studentId: string, requestedTermId?: string) {
+  const detail = await repo.findStudentDetail(studentId, institutionId);
+  if (!detail) throw NOT_FOUND();
+
+  const [terms, term] = await Promise.all([
+    findTermsForYear(detail.academicYearId),
+    resolveTermOrThrow(detail.academicYearId, requestedTermId),
+  ]);
+  const subjects = await buildSubjects(detail.studentId, detail.classId, detail.academicYearId, term.id);
+
+  return {
+    student: {
+      id: detail.studentId,
+      firstName: detail.firstName,
+      lastName: detail.lastName,
+      patronymic: detail.patronymic,
+      birthDate: detail.birthDate,
+      email: detail.email,
+      locale: detail.locale,
+      mustChangePassword: detail.mustChangePassword,
+      lastLoginAt: detail.lastLoginAt,
+    },
+    enrollment: {
+      id: detail.enrollmentId,
+      status: detail.status,
+      classId: detail.classId,
+      classLabel: detail.classLabel,
+      academicYearId: detail.academicYearId,
+      yearLabel: detail.yearLabel,
+    },
+    term: { id: term.id, label: term.label, index: term.index },
+    availableTerms: terms.map((t) => ({ id: t.id, label: t.label, index: t.index })),
+    subjects,
+  };
+}
+
+// --- People search (admin) ---
+
+export async function searchStudents(institutionId: string, opts: { q: string; limit: number; offset: number }) {
+  return search.searchStudents(institutionId, opts);
+}
+
+// Teacher hits carry what they teach. The assignment rows come from
+// `repo.listAssignments` — the exact query the assignment grid already uses —
+// and the subject/class lookups are the same two lists the grid already
+// fetches, so there is one assignments query in the codebase, not two.
+//
+// Subject names are returned in all three languages rather than pre-resolved
+// to one string: every other subject-bearing response in this app does the
+// same and the client picks by active locale. Returning a single Armenian
+// string here would reintroduce exactly the untranslated-copy bug that the
+// term labels had.
+export async function searchTeachers(institutionId: string, opts: { q: string; limit: number; offset: number }) {
+  const page = await search.searchTeachers(institutionId, opts);
+  if (page.items.length === 0) return { items: [], total: page.total };
+
+  const years = await repo.listAcademicYears(institutionId);
+  const currentYear = years.at(-1); // listAcademicYears orders by startsOn ascending
+  if (!currentYear) return { items: page.items.map((t) => ({ ...t, assignments: [] })), total: page.total };
+
+  const [assignments, subjects, classes] = await Promise.all([
+    repo.listAssignments(institutionId, currentYear.id),
+    repo.listSubjects(institutionId),
+    repo.listClasses(institutionId, currentYear.id),
+  ]);
+  const subjectById = new Map(subjects.map((s) => [s.id, s]));
+  const classById = new Map(classes.map((c) => [c.id, c]));
+
+  const byTeacher = new Map<string, { subjectId: string; nameHy: string; nameEn: string; nameRu: string; className: string }[]>();
+  for (const a of assignments) {
+    const s = subjectById.get(a.subjectId);
+    const c = classById.get(a.classId);
+    if (!s || !c) continue; // an assignment pointing at another year's class
+    const list = byTeacher.get(a.teacherId) ?? [];
+    list.push({ subjectId: s.id, nameHy: s.nameHy, nameEn: s.nameEn, nameRu: s.nameRu, className: `${c.grade}-${c.letter}` });
+    byTeacher.set(a.teacherId, list);
+  }
+
+  return {
+    items: page.items.map((t) => ({ ...t, assignments: byTeacher.get(t.id) ?? [] })),
+    total: page.total,
+  };
 }
 
 export async function addMidYearStudent(
@@ -145,7 +240,13 @@ export async function addMidYearStudent(
   const cls = await repo.findClass(data.classId, institutionId);
   if (!cls) throw NOT_FOUND();
 
-  const passwordHash = await hashPassword(generateTemporaryPassword());
+  // The plaintext is returned to the caller exactly once, the same contract
+  // the class-handout path already uses (`reissueClassCredentials`): it is
+  // never stored, and never recoverable afterwards. Previously it was
+  // generated, hashed and dropped on the floor, so a newly created student
+  // had a password no one alive knew.
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
   return db.transaction(async (tx) => {
     const [u] = await tx
       .insert(user)
@@ -166,7 +267,7 @@ export async function addMidYearStudent(
       .insert(enrollment)
       .values({ studentId: s.id, classId: data.classId, academicYearId: cls.academicYearId })
       .returning();
-    return { student: s, enrollment: e };
+    return { student: s, enrollment: e, login: u.email, temporaryPassword };
   });
 }
 

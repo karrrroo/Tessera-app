@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/i18n/locale-provider";
 import { adminApi, type AcademicYear, type Term } from "@/lib/api/admin";
 
 export default function YearsPage() {
+  const t = useT();
   const [years, setYears] = useState<AcademicYear[] | null>(null);
   const [termsByYear, setTermsByYear] = useState<Record<string, Term[]>>({});
   const [newYear, setNewYear] = useState({ label: "", startsOn: "", endsOn: "" });
@@ -45,7 +47,7 @@ export default function YearsPage() {
   return (
     <main className="mx-auto w-full max-w-2xl space-y-8 p-8">
       <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-        Academic years and terms
+        {t.admin.years}
       </h1>
 
       {years.map((year) => (
@@ -53,13 +55,13 @@ export default function YearsPage() {
           <h2 className="font-medium" style={{ color: "var(--ink)" }}>
             {year.label} ({year.startsOn} → {year.endsOn})
           </h2>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ background: "var(--bg-base)" }}>
             <thead>
               <tr style={{ color: "var(--ink-3)" }}>
                 <th className="text-left">#</th>
-                <th className="text-left">Label</th>
-                <th className="text-left">Starts</th>
-                <th className="text-left">Ends</th>
+                <th className="text-left">{t.admin.colLabel}</th>
+                <th className="text-left">{t.admin.colStarts}</th>
+                <th className="text-left">{t.admin.colEnds}</th>
               </tr>
             </thead>
             <tbody>
@@ -81,7 +83,7 @@ export default function YearsPage() {
               className="w-12 rounded border border-hair bg-panel px-2 py-1"
             />
             <input
-              placeholder="Label"
+              placeholder={t.admin.colLabel}
               value={newTerm[year.id]?.label ?? ""}
               onChange={(e) => setNewTerm((s) => ({ ...s, [year.id]: { ...(s[year.id] ?? { index: "", startsOn: "", endsOn: "" }), label: e.target.value } }))}
               className="w-32 rounded border border-hair bg-panel px-2 py-1"
@@ -99,7 +101,7 @@ export default function YearsPage() {
               className="rounded border border-hair bg-panel px-2 py-1"
             />
             <button type="submit" className="rounded px-3 py-1" style={{ background: "var(--accent)", color: "var(--accent-fg)" }}>
-              Add term
+              {t.admin.addTerm}
             </button>
           </form>
         </section>
@@ -107,11 +109,11 @@ export default function YearsPage() {
 
       <form onSubmit={createYear} className="space-y-2 border border-hair p-4">
         <h2 className="font-medium" style={{ color: "var(--ink)" }}>
-          New academic year
+          {t.admin.newYear}
         </h2>
         <div className="flex flex-wrap gap-2 text-sm">
           <input
-            placeholder="Label (e.g. 2026–2027)"
+            placeholder={t.admin.yearLabelHint}
             value={newYear.label}
             onChange={(e) => setNewYear((f) => ({ ...f, label: e.target.value }))}
             className="w-40 rounded border border-hair bg-panel px-2 py-1"
@@ -129,7 +131,7 @@ export default function YearsPage() {
             className="rounded border border-hair bg-panel px-2 py-1"
           />
           <button type="submit" className="rounded px-3 py-1" style={{ background: "var(--accent)", color: "var(--accent-fg)" }}>
-            Create year
+            {t.admin.createYear}
           </button>
         </div>
       </form>

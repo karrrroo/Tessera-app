@@ -18,6 +18,7 @@ export type StudentMarksSheetProps = {
   onClose: () => void;
   addColumnLabel: string;
   closeLabel: string;
+  historyLabel: string;
 };
 
 // GB-12's bottom sheet, opened from MobileStudentList. GB-9: the tap
@@ -39,6 +40,7 @@ export function StudentMarksSheet({
   onClose,
   addColumnLabel,
   closeLabel,
+  historyLabel,
 }: StudentMarksSheetProps) {
   const [pickingId, setPickingId] = useState<string | null>(null);
 
@@ -74,7 +76,7 @@ export function StudentMarksSheet({
                   {mark?.hasHistory && (
                     <button
                       type="button"
-                      aria-label="history"
+                      aria-label={historyLabel}
                       onClick={() => onOpenHistory(mark.id)}
                       className="text-[11px]"
                       style={{ color: "var(--ink-3)" }}

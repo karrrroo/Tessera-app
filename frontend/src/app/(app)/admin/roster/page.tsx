@@ -129,7 +129,12 @@ export default function RosterPage() {
           ))}
       </select>
 
-      <table className="w-full border border-hair text-sm">
+      {/* Flat --bg-base, never the ambient gradient: a table of data opts out
+          (tessera-v2-FINAL). Its own overflow-x container so a wide table
+          scrolls itself rather than dragging the whole mobile content area
+          sideways — same shape as the settings sessions table. */}
+      <div className="overflow-x-auto">
+      <table className="w-full border border-hair text-sm" style={{ background: "var(--bg-base)" }}>
         <thead>
           <tr className="border-b border-hair" style={{ color: "var(--ink-3)" }}>
             <th className="p-2 text-left">{t.admin.colName}</th>
@@ -166,6 +171,7 @@ export default function RosterPage() {
           ))}
         </tbody>
       </table>
+      </div>
 
       {transferTarget && (
         <div

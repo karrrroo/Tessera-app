@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useAuth } from "@/state/auth-provider";
-import { useT } from "@/i18n/locale-provider";
+import { useLocale, useT } from "@/i18n/locale-provider";
+import { displayFullName } from "@/i18n/transliterate-name";
 import { Mark } from "@/components/brand/mark";
-import { WebMobileSwitch } from "./web-mobile-switch";
 import { landingRouteForRole } from "@/lib/landing-route";
 
 // role.student/roleTeacher/roleAdmin, explicitly, with no default branch —
@@ -26,8 +26,11 @@ const ROLE_LABEL: Record<"student" | "teacher" | "admin", (t: ReturnType<typeof 
 export function AppHeader() {
   const { user, logout } = useAuth();
   const t = useT();
+  const { locale } = useLocale();
   const home = user ? landingRouteForRole(user.role) : "/overview";
-  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  // Names are stored only in Armenian, so the header transliterates them for
+  // the active locale — see transliterate-name.ts.
+  const fullName = displayFullName(user?.firstName, user?.lastName, locale);
   const roleLabel = user ? ROLE_LABEL[user.role]?.(t) : undefined;
 
   return (
@@ -38,7 +41,6 @@ export function AppHeader() {
       </Link>
 
       <div className="flex items-center gap-4">
-        <WebMobileSwitch />
         <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-2)" }}>
           <span>{fullName || roleLabel}</span>
           <button type="button" onClick={() => logout()} className="text-xs underline" style={{ color: "var(--ink-3)" }}>

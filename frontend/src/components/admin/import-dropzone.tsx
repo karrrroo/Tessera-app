@@ -4,18 +4,21 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApi } from "@/lib/api/admin";
 import { ApiRequestError } from "@/lib/api/client";
+import { useT } from "@/i18n/locale-provider";
 
-const ERROR_MESSAGES: Record<string, string> = {
-  IMPORT_FILE_UNREADABLE: "Could not read that file.",
-  IMPORT_COLUMNS_MISSING: "The file is missing one or more required columns.",
-  IMPORT_TOO_MANY_ROWS: "That file has too many rows (maximum 2000).",
-  UNSUPPORTED_MEDIA_TYPE: "That file isn't a real .xlsx spreadsheet.",
-  PAYLOAD_TOO_LARGE: "That file is too large (maximum 10 MB).",
+type Dict = ReturnType<typeof useT>;
+const ERROR_KEY: Record<string, keyof Dict["admin"]> = {
+  IMPORT_FILE_UNREADABLE: "errUnreadable",
+  IMPORT_COLUMNS_MISSING: "errColumns",
+  IMPORT_TOO_MANY_ROWS: "errTooManyRows",
+  UNSUPPORTED_MEDIA_TYPE: "errNotXlsx",
+  PAYLOAD_TOO_LARGE: "errTooLarge",
 };
 
 // Template download above the drop zone — downloading it is the first
 // thing that happens (roadmap ADM-4).
 export function ImportDropzone({ kind, academicYearId }: { kind: "students" | "teachers"; academicYearId: string }) {
+  const t = useT();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -30,9 +33,10 @@ export function ImportDropzone({ kind, academicYearId }: { kind: "students" | "t
       router.push(`/admin/import/${batch.batchId}?kind=${kind}&academicYearId=${academicYearId}`);
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        setError(ERROR_MESSAGES[err.code] ?? err.code);
+        const key = ERROR_KEY[err.code];
+        setError(key ? (t.admin[key] as string) : err.code);
       } else {
-        setError("Upload failed.");
+        setError(t.admin.uploadFailed);
       }
     } finally {
       setBusy(false);
@@ -41,9 +45,16 @@ export function ImportDropzone({ kind, academicYearId }: { kind: "students" | "t
 
   return (
     <div className="space-y-3">
-      <a href={adminApi.importTemplateUrl(kind)} className="inline-block text-sm underline" style={{ color: "var(--ink-2)" }}>
-        Download the {kind} template (.xlsx)
-      </a>
+      <button
+        type="button"
+        onClick={() => {
+          void adminApi.downloadImportTemplate(kind).catch(() => setError(t.admin.uploadFailed));
+        }}
+        className="inline-block text-sm underline"
+        style={{ color: "var(--ink-2)" }}
+      >
+        {kind === "students" ? t.admin.tmplStudents : t.admin.tmplTeachers}
+      </button>
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -60,7 +71,7 @@ export function ImportDropzone({ kind, academicYearId }: { kind: "students" | "t
         className="flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded border-2 border-dashed text-sm"
         style={{ borderColor: dragOver ? "var(--accent)" : "var(--hair)", color: "var(--ink-3)" }}
       >
-        {busy ? "Uploading…" : "Drag a file here, or click to choose one"}
+        {busy ? t.admin.uploading : t.admin.dropHint}
         <input
           ref={inputRef}
           type="file"

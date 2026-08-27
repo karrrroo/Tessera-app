@@ -247,6 +247,7 @@ export default function GradebookPage() {
                   studentLabel={t.scr.gb.student}
                   addColumnLabel={t.scr.gb.addCol}
                   avgLabel={t.scr.gb.avgShort}
+                  historyLabel={t.scr.gb.histAria}
                 />
               </div>
               <div className="tablet:hidden">
@@ -323,6 +324,7 @@ export default function GradebookPage() {
               onClose={() => setOpenStudentId(null)}
               addColumnLabel={t.scr.gb.addCol}
               closeLabel={t.scr.gb.close}
+              historyLabel={t.scr.gb.histAria}
             />
           );
         })()}

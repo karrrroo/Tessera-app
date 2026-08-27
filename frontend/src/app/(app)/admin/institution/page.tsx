@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { adminApi, type Institution } from "@/lib/api/admin";
+import { useT } from "@/i18n/locale-provider";
 
 export default function InstitutionPage() {
+  const t = useT();
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [form, setForm] = useState({ name: "", region: "", type: "" });
   const [saving, setSaving] = useState(false);
@@ -34,12 +36,12 @@ export default function InstitutionPage() {
   return (
     <main className="mx-auto w-full max-w-lg space-y-6 p-8">
       <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-        Institution
+        {t.admin.institution}
       </h1>
       <form onSubmit={save} className="space-y-4">
         <label className="block space-y-1">
           <span className="text-sm" style={{ color: "var(--ink-2)" }}>
-            Name
+            {t.admin.instName}
           </span>
           <input
             value={form.name}
@@ -50,7 +52,7 @@ export default function InstitutionPage() {
         </label>
         <label className="block space-y-1">
           <span className="text-sm" style={{ color: "var(--ink-2)" }}>
-            Region
+            {t.admin.instRegion}
           </span>
           <input
             value={form.region}
@@ -61,7 +63,7 @@ export default function InstitutionPage() {
         </label>
         <label className="block space-y-1">
           <span className="text-sm" style={{ color: "var(--ink-2)" }}>
-            Type
+            {t.admin.instType}
           </span>
           <input
             value={form.type}
@@ -76,11 +78,11 @@ export default function InstitutionPage() {
           className="rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
           style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
         >
-          Save
+          {t.admin.save}
         </button>
         {saved && (
           <span className="ml-3 text-sm" style={{ color: "var(--ok)" }}>
-            Saved
+            {t.admin.saved}
           </span>
         )}
       </form>

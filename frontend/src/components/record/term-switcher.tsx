@@ -1,8 +1,12 @@
 "use client";
 
+import { useT } from "@/i18n/locale-provider";
+import { termLabel } from "@/i18n/term-label";
 import type { Term } from "@/lib/api/record";
 
 export function TermSwitcher({ terms, activeTermId, onChange }: { terms: Term[]; activeTermId: string; onChange: (termId: string) => void }) {
+  // Before the early return — a hook may not be called conditionally.
+  const t = useT();
   if (terms.length <= 1) return null;
 
   return (
@@ -21,7 +25,7 @@ export function TermSwitcher({ terms, activeTermId, onChange }: { terms: Term[];
               border: active ? "none" : "1px solid var(--hair)",
             }}
           >
-            {term.label}
+            {termLabel(term, t)}
           </button>
         );
       })}
