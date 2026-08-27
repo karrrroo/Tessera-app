@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ImportRow } from "@/lib/api/admin";
+import { useT } from "@/i18n/locale-provider";
 
 const STUDENT_FIELDS = ["lastName", "firstName", "patronymic", "birthDate", "className", "email"] as const;
 const TEACHER_FIELDS = ["lastName", "firstName", "patronymic", "email", "subject", "classNames"] as const;
@@ -22,6 +23,17 @@ export function ImportPreviewTable({
   kind: "students" | "teachers";
   onCellCommit: (rowIndex: number, field: string, value: string) => Promise<void>;
 }) {
+  const t = useT();
+  const FIELD_LABEL: Record<(typeof STUDENT_FIELDS)[number] | (typeof TEACHER_FIELDS)[number], string> = {
+    lastName: t.admin.importFieldLastName,
+    firstName: t.admin.importFieldFirstName,
+    patronymic: t.admin.importFieldPatronymic,
+    birthDate: t.admin.importFieldBirthDate,
+    className: t.admin.importFieldClassName,
+    email: t.admin.importFieldEmail,
+    subject: t.admin.importFieldSubject,
+    classNames: t.admin.importFieldClassNames,
+  };
   const fields = kind === "students" ? STUDENT_FIELDS : TEACHER_FIELDS;
   const errorCount = rows.filter((r) => r.status === "error").length;
   const warningCount = rows.filter((r) => r.status === "warning").length;
@@ -50,9 +62,9 @@ export function ImportPreviewTable({
     <div className="space-y-3">
       <div className="flex gap-2 text-sm">
         {([
-          ["all", `All (${rows.length})`],
-          ["errors", `Errors (${errorCount})`],
-          ["warnings", `Warnings (${warningCount})`],
+          ["all", `${t.admin.importFilterAll} (${rows.length})`],
+          ["errors", `${t.admin.importFilterErrors} (${errorCount})`],
+          ["warnings", `${t.admin.importFilterWarnings} (${warningCount})`],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -74,7 +86,7 @@ export function ImportPreviewTable({
           <div className="p-2">#</div>
           {fields.map((f) => (
             <div key={f} className="p-2">
-              {f}
+              {FIELD_LABEL[f]}
             </div>
           ))}
         </div>

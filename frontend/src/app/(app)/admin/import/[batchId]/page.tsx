@@ -5,19 +5,33 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { adminApi, type ImportBatch } from "@/lib/api/admin";
 import { ApiRequestError } from "@/lib/api/client";
 import { ImportPreviewTable } from "@/components/admin/import-preview-table";
-
-const APPLY_ERROR_MESSAGES: Record<string, string> = {
-  IMPORT_BATCH_NOT_PREVIEWING: "This batch was already applied or discarded.",
-  IMPORT_HAS_ERRORS: "Some rows still have errors.",
-  IMPORT_BATCH_EXPIRED: "This preview has expired (previews live 24 hours). Upload the file again.",
-};
+import { useT, interpolate } from "@/i18n/locale-provider";
 
 export default function ImportBatchPage() {
+  const t = useT();
   const { batchId } = useParams<{ batchId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
   const academicYearId = searchParams.get("academicYearId") ?? "";
   const kind = (searchParams.get("kind") as "students" | "teachers") ?? "students";
+
+  // A real bug, reported live: this whole screen — the "Apply" step of
+  // import, where temporary passwords are shown exactly once — was 100%
+  // hardcoded English, despite decisions.md recording "both import pages"
+  // as fully localized. Those were the upload pages; this review/apply
+  // page is a separate route they never covered.
+  const APPLY_ERROR_MESSAGES: Record<string, string> = {
+    IMPORT_BATCH_NOT_PREVIEWING: t.admin.importBatchNotPreviewing,
+    IMPORT_HAS_ERRORS: t.admin.importHasErrors,
+    IMPORT_BATCH_EXPIRED: t.admin.importBatchExpired,
+  };
+  const CREATED_LABEL: Record<string, string> = {
+    students: t.admin.importCreatedStudents,
+    teachers: t.admin.importCreatedTeachers,
+    users: t.admin.importCreatedUsers,
+    enrollments: t.admin.importCreatedEnrollments,
+    assignments: t.admin.importCreatedAssignments,
+  };
 
   const [batch, setBatch] = useState<ImportBatch | null>(null);
   const [applying, setApplying] = useState(false);
@@ -52,7 +66,7 @@ export default function ImportBatchPage() {
       if (err instanceof ApiRequestError) {
         setApplyError(APPLY_ERROR_MESSAGES[err.code] ?? err.code);
       } else {
-        setApplyError("Could not apply this batch.");
+        setApplyError(t.admin.importApplyGenericError);
       }
     } finally {
       setApplying(false);
@@ -67,20 +81,19 @@ export default function ImportBatchPage() {
   if (!batch) return null;
 
   if (applied) {
+    const list = Object.entries(applied.created)
+      .map(([k, v]) => `${v} ${CREATED_LABEL[k] ?? k}`)
+      .join(", ");
     return (
       <main className="mx-auto w-full max-w-2xl space-y-4 p-8">
         <h1 className="text-2xl font-semibold" style={{ color: "var(--ok)" }}>
-          Applied
+          {t.admin.importAppliedTitle}
         </h1>
         <p className="text-sm" style={{ color: "var(--ink-2)" }}>
-          {Object.entries(applied.created)
-            .map(([k, v]) => `${v} ${k}`)
-            .join(", ")}{" "}
-          created.
+          {interpolate(t.admin.importCreatedSummary, { list })}
         </p>
         <p className="text-sm font-medium" style={{ color: "var(--danger)" }}>
-          {applied.credentials.length} temporary passwords were generated. They are shown once, right now, and never
-          again — write them down or print the handout before leaving this page.
+          {interpolate(t.admin.importCredentialsWarning, { count: applied.credentials.length })}
         </p>
         <pre className="max-h-96 overflow-auto border border-hair p-3 text-xs" style={{ color: "var(--ink)" }}>
           {JSON.stringify(applied.credentials, null, 2)}
@@ -97,12 +110,12 @@ export default function ImportBatchPage() {
             {batch.filename}
           </h1>
           <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-            {batch.rowCount} rows · {batch.errorCount} errors · {batch.warningCount} warnings
+            {interpolate(t.admin.importRowSummary, { rows: batch.rowCount, errors: batch.errorCount, warnings: batch.warningCount })}
           </p>
         </div>
         <div className="flex gap-2">
           <button onClick={discard} className="rounded border border-hair px-4 py-2 text-sm" style={{ color: "var(--ink-2)" }}>
-            Discard
+            {t.admin.importDiscard}
           </button>
           <button
             onClick={apply}
@@ -110,7 +123,7 @@ export default function ImportBatchPage() {
             className="rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
             style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
-            {applying ? "Applying…" : "Apply"}
+            {applying ? t.admin.importApplying : t.admin.importApply}
           </button>
         </div>
       </div>
