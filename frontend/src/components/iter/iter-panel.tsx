@@ -14,7 +14,19 @@ import { useFocusTrap } from "@/lib/use-focus-trap";
 // independently (18s/26s, linear, alternating) by no more than 8% of the
 // panel's width. This exact background appears nowhere else in the
 // product, so its keyframe names are scoped accordingly.
-function IterEmptyBackground() {
+//
+// PERMANENT, and that is the fix. This used to be called
+// IterEmptyBackground and was rendered only while `isEmpty` was true, so the
+// blooms vanished the instant the first message was posted — the panel lost
+// its background as soon as it was used. The gradient belongs to the PANEL,
+// not to the empty state and not to a pending state: "the gradient is
+// permanent and belongs to the panel."
+//
+// It sits behind the scrolling message list rather than inside it, so the
+// blooms stay put while messages scroll over them; a bloom that scrolled
+// with the list would drag its own soft edge across the panel boundary,
+// which is the one thing corrections-4 §2 forbids.
+function IterPanelBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       <div
@@ -169,7 +181,7 @@ export function IterPanel() {
           boxShadow: "inset 0 1px 0 var(--hair-top)",
         }}
       >
-        {isEmpty && <IterEmptyBackground />}
+        <IterPanelBackground />
         <div className="relative flex justify-center pb-0.5 pt-2.5 tablet:hidden">
           <button type="button" onClick={closePanel} aria-label={t.iter.close} className="h-1.5 w-9 rounded-full" style={{ background: "var(--ink-3)", opacity: 0.5 }} />
         </div>
@@ -255,7 +267,11 @@ export function IterPanel() {
         </div>
 
         <div className="relative flex-none px-4 pb-4 pt-2">
-          <div className="flex flex-col gap-2.5 rounded-[26px] p-3" style={{ background: "var(--surface2)", border: "1px solid var(--hair)" }}>
+          {/* No border and no second background: the input sits on the
+              panel's own surface (see .iter-composer in tessera.css, which
+              carries the focus state that replaces the border as the
+              affordance). */}
+          <div className="iter-composer flex flex-col gap-2.5 p-3">
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

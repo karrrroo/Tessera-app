@@ -11,8 +11,26 @@ import { useT } from "@/i18n/locale-provider";
 // section revised most across the design-brief chain; see
 // docs/reference/tessera-design-brief-merged.md §9 for the full chronology).
 // Geometry, not behaviour: the docked button's real QR/gradebook-insert
-// logic is Phase 6/8's job — this renders it correctly shaped and positioned,
-// disabled until then.
+// logic is Phase 6/8's job — this renders it correctly shaped and positioned.
+//
+// NOTE, because the comment above used to say "disabled until then" and that
+// is not what the code does: the button carries no onClick and is not
+// `disabled` either. It is inert for every role, so it looks pressable and
+// does nothing. Reported rather than wired — what it should open for a
+// student (the QR sheet lives in /id) and what it should insert for a teacher
+// are Phase 6/8 decisions, not this component's.
+//
+// GEOMETRY, verified rather than assumed: 58px of button plus a 5px ring on
+// each side, which is a 68px border box inside brief §9's 78px centre column
+// ("the 58px docked button plus its 5px ring on each side"). A measurement of
+// the border box therefore reads 68, not 58, and that is correct.
+//
+// ROLE. student -> QR, teacher -> plus. The teacher case is not a guess:
+// brief item 17, final per corrections-6 §2, is "No teacher credential.
+// Teachers have no ID card, no QR, and no QR glyph anywhere," and puts a
+// Today screen and a plus-glyph docked button in its place. Admin is defined
+// nowhere in either the roadmap or the brief, so it follows the student form
+// per instruction — see the comment at the glyph below.
 export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "teacher" | "admin" }) {
   const pathname = usePathname();
   const t = useT();
@@ -77,7 +95,7 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
       </GlassLayered>
       <button
         type="button"
-        aria-label={role === "student" ? t.nav.showQr : t.nav.addAssessment}
+        aria-label={role === "teacher" ? t.nav.addAssessment : t.nav.showQr}
         className="pointer-events-auto absolute flex items-center justify-center rounded-full text-white"
         style={{
           left: "50%",
@@ -92,7 +110,15 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
           boxShadow: "0 6px 22px rgba(11,63,201,.45)",
         }}
       >
-        {role === "student" ? (
+        {/* Only the TEACHER gets the plus. Admin has no defined centre button
+            anywhere in the roadmap or the brief, so it takes the student form
+            as instructed rather than inheriting the teacher's quick-mark —
+            an admin has no gradebook to insert into. Worth knowing if this is
+            ever reversed: an admin has no QR credential either
+            (`GET /api/me/credential` returns 403 for the admin role), so
+            neither glyph is meaningful for them until the button is wired,
+            and this choice is cosmetic today. */}
+        {role !== "teacher" ? (
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="8" height="8" rx="1" />
             <rect x="15" y="3" width="8" height="8" rx="1" />

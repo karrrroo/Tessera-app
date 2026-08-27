@@ -2071,3 +2071,127 @@ the fourth submission in an hour returning `RATE_LIMITED`, approve opening the p
 with no account created, and reject-then-delete removing the row and the object. The code paths
 exist and typecheck; every one of them currently returns 500 because `application` does not
 exist. They are listed here as unverified rather than described as working.
+
+**D-167. A2 (the Web/Mobile toggle) was already gone; this pass verified it rather than
+repeating it.** `grep -rn "isMobileView\|mobileMode\|viewMode\|deviceToggle\|Վեբ\|Բջջային"
+frontend/src` returns nothing, and so does a grep for `web-mobile-switch`,
+`layout-mode-provider`, `PhoneFrame`, `statusBar` and `notch`. The DONE-WHEN was then measured
+on a production build at five widths — 1440, 1024, 950, 899 and 390, deliberately straddling the
+900px breakpoint where the old hydration mismatch lived: **zero hydration messages and zero
+console errors at every width**, zero page overflow, exactly one `<main>`, and exactly one
+navigation visible at a time (sidebar at 950px and above, pill nav at 899px and below), which is
+what CSS-gated chrome is supposed to look like. The language pill measures a **0px top offset
+inside its row with `margin-top: 0px`, flush with the title beside it** — no residual clearance
+for the deleted status-bar mock, so it does not hang low.
+
+**D-168. A3's premise was already satisfied; the bug it pointed at was somewhere else.**
+`PillNav` has always branched on role, and the geometry is right: 58px of button plus a 5px
+`--bg-base` ring on each side, which is a 68px border box inside brief §9's 78px centre column
+("the 58px docked button plus its 5px ring on each side"). A measurement of the border box
+therefore reads 68 and that is correct — worth recording because it looks like a failure against
+a literal reading of "58px". No clip-path on the pill, so no notch.
+
+The teacher's plus glyph is not a guess either: brief item 17, final per corrections-6 §2, is
+"No teacher credential. Teachers have no ID card, no QR, and no QR glyph anywhere. In its place:
+an 'Այսօր' (Today) screen and a plus-glyph docked button."
+
+What A3's hint about a defaulted role did find is real, but in a different file:
+`first-login/page.tsx` called `landingRouteForRole(user?.role ?? "student")` immediately after an
+awaited `refreshUser()`. `user` there is the closure's pre-refresh value, so the fallback
+silently routed anyone it could not identify to the student landing page — a teacher would land
+on `/overview` and be refused. Fixed by removing the fallback: the redirect now happens only
+when the role is actually known, and otherwise the existing effect handles it the moment
+`mustChangePassword` turns false, which it already did.
+
+**D-169. Admin's docked centre button now follows the student form, per A3's own fallback, and
+the consequence is recorded.** Neither the roadmap nor the design brief defines a centre button
+for admin, and A3 says "if undefined, note it and use the student form" — so admin shows the QR
+glyph rather than inheriting the teacher's quick-mark, which is right at least in that an admin
+has no gradebook to insert into. Noting the awkward part: an admin has no QR credential either
+(`GET /api/me/credential` returns **403** for the admin role), so neither glyph is meaningful for
+them. It is cosmetic today because **the docked button is inert for every role** — it carries no
+`onClick` and is not `disabled` either, despite a comment that claimed "disabled until then". So
+it looks pressable and does nothing. Reported rather than wired: what it should open for a
+student and insert for a teacher are Phase 6/8 decisions.
+
+**D-170. A conflict between the roadmap and the design brief about teacher ID cards, and a
+correction to D-144.** D-144 concluded that `/api/me/credential` returning 200 for a teacher was
+"correct behaviour... teachers have ID cards by design (roadmap line 1232)". That cited the
+roadmap and missed that the design brief's final correction reverses it: brief item 17,
+corrections-6 §2, "reverses the base's teacher card variant entirely". The implementation follows
+the roadmap — there is a `teacher-id-card.tsx` and the endpoint answers 200 for teachers — and
+the brief's latest word says there should be neither. Left as it is and reported: removing the
+teacher ID card means deleting a working screen, which is a product decision, not a defect fix.
+D-144 should be read with this entry.
+
+**D-171. A3's role table, verified over HTTP against all four demo accounts.** Sixteen
+role-gated endpoints × student / teacher / admin / anonymous. Every cell matched the intended
+rule; the three that looked wrong were wrong expectations of mine, not defects:
+`GET /api/me/subjects` returns 404 for everyone because the route is `/api/me/subjects/:id` and
+takes an id; `GET /api/export/logs` refuses a teacher because `export/service.ts` has an explicit
+`if (auth.role !== "admin") throw FORBIDDEN()` — an institution-wide export audit log is an admin
+view even though teachers can export; and `POST /api/admin/applications/:id/approve` answering
+400 for an admin is `IDEMPOTENCY_KEY_REQUIRED` firing correctly, since the probe sent no header.
+Anonymous callers got 401 on all sixteen. A hidden button is not a permission, and none of these
+depend on one.
+
+**D-172. A4's premise is false, its rule is not violated, and the defect it describes is real
+and fixed.** A4 asks to remove Iter's thinking indicator because "No model is connected" and a
+rotating ring "signals computation that is not happening". A model **is** connected:
+`iter/service.ts` calls Google's Gemini (`gemini-3.6-flash`, D-60) on every send and returns a
+generated reply, and this pass observed it live — the message count in the panel went from 1 to 2
+after a real send, i.e. a real reply arrived. There is also **no 1400ms delay in the send path**:
+`grep -rn "1400"` finds only the login opening sequence and the mesh entry transform, and
+`sending` is true for exactly the duration of one network round trip, previously measured at
+4.73s. So "remove the thinking pill from the no-model reply flow" has no target — there is no
+no-model flow — and the pill is a truthful in-flight indicator, not simulated reasoning, so
+IT-8 is not breached. Removing it would leave roughly five seconds of dead interface. Kept, per
+the standing rule that two failures against a brief usually mean the brief is out of date.
+
+What A4 gets right is the gradient. It was implemented as `IterEmptyBackground` and rendered only
+while `isEmpty` was true, so the blooms vanished the instant the first message was posted: the
+panel lost its background as soon as it was used. Renamed `IterPanelBackground` and rendered
+unconditionally, behind the scrolling list rather than inside it, so the blooms stay put while
+messages scroll over them — a bloom that scrolled with the list would drag its soft edge across
+the panel boundary, the one thing corrections-4 §2 forbids.
+
+Verified on a production build, both sheets, with a real message sent and answered: the desktop
+sheet (420×900) and the mobile sheet (390×776) each show **2 bloom layers at opacity 0.55 and
+0.40** running `tessera-iter-drift-a`/`-b`, with grain over the whole panel, and **still 2 blooms
+after the panel contains two messages** — which is the fix. "No visible edge" was measured rather
+than eyeballed, by scanning a band across the upper third and taking the first derivative of
+column-mean luminance: mean |dL/dx| 0.256 with a 3.92 maximum on desktop (spike ratio 15.3) and
+0.238 with a 2.98 maximum on mobile (12.5). An edge is a step, which would show as a spike orders
+of magnitude above the mean; these profiles are smooth.
+
+**D-173. A5's premise is also false: `iter_message` does not exist, because D-57 deliberately
+decided against it.** A5 says "The iter_message table already exists — no schema change." `\dt`
+returns 22 tables and it is not among them. D-57 records the user choosing to keep every message
+server-side-stateless precisely so that no retention question about minors' conversations had to
+be answered. A5 reverses that, which is the user's call — but it is a schema change, so
+`docs/reference/tessera-schema-iter-message.sql` was written and handed over rather than applied:
+one row per exchange, which maps 1:1 onto the endpoint's existing `{ id, storedAt, reply }`
+response; `on delete cascade` matching `support_ticket`; `locale` reusing the existing
+`locale_code` enum so `schema:check`'s enum list is unchanged; and the column named `body` rather
+than `text`, since `text` is a type name in Postgres and `support_ticket` already uses `body`.
+
+A5 also says the stored reply "stays null". With a live model that would make history show only
+half of every conversation, so the handed-over shape stores the real reply. Flagged rather than
+assumed.
+
+The server-side history itself (`GET`/`POST /api/iter/messages` scoped by the token, the panel
+loading history on open, the cross-user isolation check) is **not built**, because every query it
+needs would fail against a table that does not exist. It is listed as outstanding rather than
+described as done. Note for whoever picks it up: the retention question D-57 avoided becomes
+live the moment that table has rows, and Q10 is still unresolved.
+
+**D-174. A5's one table-independent item is done: the Iter composer has no frame.** It carried
+its own 1px `--hair` border and its own `--surface2` background, which made it read as a separate
+widget dropped into the panel. Both removed. What replaces them is a focus state, because a
+borderless input with no focus treatment is not a simplification but an accessibility regression:
+`.iter-composer:focus-within` paints a 2px `--accent` ring and a `--surface2` fill, on the
+wrapper rather than the textarea so the input and its send button respond as one control, with
+the textarea's own outline suppressed to avoid a second inner ring. Measured on a production
+build in both themes — unfocused: `border-top-width: 0px`, background `rgba(0, 0, 0, 0)`,
+`box-shadow: none`; focused: a 2px ring (`rgb(241, 239, 233)` dark, `rgb(16, 17, 18)` light) over
+`rgb(20, 24, 34)` / `rgb(242, 242, 244)`. Frame gone, focus visible, both themes.

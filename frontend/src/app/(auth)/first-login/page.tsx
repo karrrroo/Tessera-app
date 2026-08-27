@@ -46,7 +46,14 @@ export default function FirstLoginPage() {
     try {
       await apiJson("/api/auth/password/change", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) });
       await refreshUser();
-      router.push(landingRouteForRole(user?.role ?? "student"));
+      // No `?? "student"` fallback here. `user` is this closure's value, i.e.
+      // the profile from BEFORE the refresh above, so defaulting it silently
+      // sent whoever it could not identify to the student landing route — a
+      // teacher would land on /overview and be refused. When the role is
+      // known, go straight there; when it is not, do nothing and let the
+      // effect above redirect once refreshUser() has updated state, which it
+      // already does the moment mustChangePassword turns false.
+      if (user?.role) router.push(landingRouteForRole(user.role));
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === "AUTH_CURRENT_PASSWORD_INVALID") {
         setError(t.auth.errCreds);

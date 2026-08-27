@@ -436,3 +436,27 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ITER COMPOSER — the input sits on the panel's own surface. It used to carry
+   its own 1px border and its own --surface2 background, which made it read as
+   a separate widget dropped into the panel rather than part of it. Both are
+   gone; what replaces them is a focus state, because a borderless input with
+   no focus treatment is not a simplification, it is an accessibility
+   regression. focus-within on the wrapper, not :focus on the textarea, so the
+   whole composer row (input plus send button) responds as one control. */
+.iter-composer {
+  border-radius: 26px;
+  transition: box-shadow 140ms var(--ease-out), background-color 140ms var(--ease-out);
+}
+.iter-composer:focus-within {
+  background: var(--surface2);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+/* The textarea's own outline would draw a second, inner ring inside the one
+   above — one focus indicator, on the wrapper. */
+.iter-composer textarea:focus-visible {
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .iter-composer { transition: none; }
+}
