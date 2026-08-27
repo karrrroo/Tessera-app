@@ -49,7 +49,23 @@ const MOBILE_TAB_ITEMS: Record<"student" | "teacher" | "admin", NavItemId[]> = {
   admin: ["admin", "queue", "settings"],
 };
 
-const ICON_BY_ID: Partial<Record<NavItemId, string>> = ICON;
+// A real bug, reported live: the admin sidebar's three items all rendered
+// the same gear icon. Root cause: ICON (generated verbatim from the design
+// source) never had an "admin" or "queue" entry — the design package
+// predates those screens — so both silently fell through to `?? ICON.settings`
+// below. This affects the teacher sidebar too, for the same reason (it also
+// has a "queue" item). Rather than drawing new glyphs the design source
+// never specified, each reuses the closest existing shape: admin's own
+// screen is a dashboard/checklist, closest to "overview"'s 2x2 grid; queue
+// is literally a credential-requests queue, the same concept "creds"
+// already draws as a shield/badge. No role ever renders both items of a
+// reused pair at once (student-only vs. teacher/admin-only), so there's no
+// on-screen collision.
+const ICON_OVERRIDE: Partial<Record<NavItemId, string>> = {
+  admin: ICON.overview,
+  queue: ICON.creds,
+};
+const ICON_BY_ID: Partial<Record<NavItemId, string>> = { ...ICON, ...ICON_OVERRIDE };
 
 function buildItems(ids: NavItemId[], t: Dictionary): NavItem[] {
   return ids.map((id) => ({
