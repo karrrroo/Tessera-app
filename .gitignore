@@ -27,3 +27,6 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Performance measurement harnesses (A1) — scratch, not part of the app.
+.perf/

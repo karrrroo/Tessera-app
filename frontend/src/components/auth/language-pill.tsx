@@ -18,11 +18,22 @@ const CODES: Record<(typeof LOCALES)[number], string> = { hy: "HY", en: "EN", ru
 // matters here too: without it a grid item won't shrink below its own
 // content's intrinsic width, which defeats the equal-width grid track the
 // moment any label is wider than 1/3 of the pill.
-// The sliding fill is positioned with `left` as a percentage of the *track*
-// (this element's own containing block), not `transform: translateX(%)` —
-// a translateX percentage resolves against the translated element's *own*
-// width, which for a single one-third-wide segment is a different quantity
-// than one full segment-step of the track, and would drift across positions.
+// The sliding fill moves with `transform`, not `left` (brief §13). An
+// earlier revision of this file used `left` and argued that translateX's
+// percentage — which resolves against the translated element's own width —
+// is a different quantity from one segment-step of the track. That is true
+// in general and false for this geometry, which is why the swap is safe
+// here: the fill is exactly one segment wide, and three segments tile the
+// track with no gaps, so the two quantities are the same 36px. Concretely,
+// the container is 114px border-box with a 1px border and 2px padding, so
+// the fill's containing block is 112px; a segment is (112 - 4) / 3 = 36px;
+// and the fill's own width is that same expression. Verified by measuring
+// the fill's rect in all three states before and after the change --
+// identical to the pixel (see docs/decisions.md).
+//
+// If the fill is ever made narrower than a segment (an inset, a gap), this
+// stops being true and the offset needs a `calc()` against the track, not
+// a bare percentage.
 export function LanguagePill() {
   const { locale, setLocale } = useLocale();
   const activeIndex = LOCALES.indexOf(locale);
@@ -38,12 +49,18 @@ export function LanguagePill() {
       className="relative grid h-8 shrink-0 rounded-full border border-hair bg-transparent p-0.5 font-mono text-xs uppercase text-ink-3"
       style={{ letterSpacing: "0.6px", gridTemplateColumns: `repeat(${LOCALES.length}, 1fr)`, width: 114 }}
     >
+      {/* Slides on transform, not on `left` (brief §13). The swap is exact,
+          not an approximation: one segment-step of the track is
+          (100% - 4px) / 3 of the container, and the indicator's own width
+          is that same expression — so translateX(n * 100%), where 100% is
+          the indicator's own width, lands on precisely the position the
+          old `left: calc(2px + n * (100% - 4px) / 3)` computed. */}
       <span
         aria-hidden
-        className="absolute top-0.5 h-7 rounded-full transition-[left] duration-200"
+        className="absolute left-0.5 top-0.5 h-7 rounded-full transition-transform duration-200"
         style={{
-          left: `calc(2px + ${activeIndex} * (100% - 4px) / ${LOCALES.length})`,
           width: `calc((100% - 4px) / ${LOCALES.length})`,
+          transform: `translateX(calc(${activeIndex} * 100%))`,
           background: "var(--lang-pill-fill)",
           transitionTimingFunction: "var(--ease-out)",
         }}

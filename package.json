@@ -14,6 +14,7 @@
     "data:topup": "node scripts/data-topup.mjs",
     "tokens:check": "node scripts/tokens-check.mjs",
     "i18n:check": "tsx scripts/i18n-check.mjs",
+    "name-search:check": "node scripts/name-search-check.mjs",
     "prestart": "node scripts/guard-no-migrations.mjs && npm run db:start",
     "start": "concurrently -n backend,frontend -c blue,green \"npm run start -w backend\" \"npm run start -w frontend\"",
     "predev": "node scripts/guard-no-migrations.mjs && npm run db:start",

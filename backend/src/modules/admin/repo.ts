@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   institution,
@@ -16,6 +16,7 @@ import {
   auditLog,
 } from "../../db/schema.js";
 import { ApiError } from "../../http/errors.js";
+import { nameForms } from "../../lib/name-search.js";
 
 type EnrollmentStatusValue = "active" | "transferred" | "departed" | "graduated";
 
@@ -189,10 +190,41 @@ export async function findClass(id: string, institutionId: string) {
 }
 
 // Roster: student + user + current enrollment, scoped to institution.
-export async function listRoster(institutionId: string, filters: { classId?: string; status?: string }) {
+// `q` is the admin's one search box: it matches a given name, a surname, a
+// login, or a class label ("11-Բ"), because an admin looking for a student
+// types whichever of those they happen to know. Matching is ILIKE-contains,
+// not prefix — surnames get searched by fragment in practice, and the roster
+// is a few hundred rows, so an index-friendly prefix match would buy nothing
+// and miss the common case. `class` is joined unconditionally now (every
+// enrollment has a notNull classId) so the label can be both searched and
+// returned; the caller needs it to render a result row without a second
+// lookup per student.
+export async function listRoster(
+  institutionId: string,
+  filters: { classId?: string; status?: string; q?: string },
+) {
   const conditions = [eq(student.institutionId, institutionId)];
   if (filters.classId) conditions.push(eq(enrollment.classId, filters.classId));
   if (filters.status) conditions.push(eq(enrollment.status, filters.status as EnrollmentStatusValue));
+
+  const q = filters.q?.trim();
+  if (q) {
+    // Escape the LIKE metacharacters so a literal % or _ in a search box
+    // does not silently turn into a wildcard.
+    const pattern = `%${q.replace(/[\\%_]/g, (ch) => "\\" + ch)}%`;
+    // Every script the name can be read in, not just the stored Armenian —
+    // same reason as admin/search.ts's matchesAnyName: the admin can only
+    // type what the UI showed them, and the UI transliterates.
+    const nameMatches = [...nameForms(student.firstName), ...nameForms(student.lastName)].map((form) =>
+      ilike(form, pattern),
+    );
+    const match = or(
+      ...nameMatches,
+      ilike(sql`${user.email}::text`, pattern),
+      ilike(sql`(${schoolClass.grade} || '-' || ${schoolClass.letter})`, pattern),
+    );
+    if (match) conditions.push(match);
+  }
 
   return db
     .select({
@@ -204,13 +236,49 @@ export async function listRoster(institutionId: string, filters: { classId?: str
       email: user.email,
       enrollmentId: enrollment.id,
       classId: enrollment.classId,
+      classLabel: sql<string>`(${schoolClass.grade} || '-' || ${schoolClass.letter})`,
       status: enrollment.status,
     })
     .from(student)
     .innerJoin(user, eq(user.id, student.userId))
     .innerJoin(enrollment, eq(enrollment.studentId, student.id))
+    .innerJoin(schoolClass, eq(schoolClass.id, enrollment.classId))
     .where(and(...conditions))
     .orderBy(student.lastName, student.firstName);
+}
+
+// One student, with everything an admin needs to identify them and reach
+// their record: the enrolment row carries the class and year the marks are
+// then read against. Scoped to the caller's institution so an admin cannot
+// read across tenants by guessing a uuid.
+export async function findStudentDetail(studentId: string, institutionId: string) {
+  const [row] = await db
+    .select({
+      studentId: student.id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      patronymic: student.patronymic,
+      birthDate: student.birthDate,
+      email: user.email,
+      userId: user.id,
+      mustChangePassword: user.mustChangePassword,
+      lastLoginAt: user.lastLoginAt,
+      locale: user.locale,
+      enrollmentId: enrollment.id,
+      status: enrollment.status,
+      classId: enrollment.classId,
+      classLabel: sql<string>`(${schoolClass.grade} || '-' || ${schoolClass.letter})`,
+      academicYearId: enrollment.academicYearId,
+      yearLabel: academicYear.label,
+    })
+    .from(student)
+    .innerJoin(user, eq(user.id, student.userId))
+    .innerJoin(enrollment, eq(enrollment.studentId, student.id))
+    .innerJoin(schoolClass, eq(schoolClass.id, enrollment.classId))
+    .innerJoin(academicYear, eq(academicYear.id, enrollment.academicYearId))
+    .where(and(eq(student.id, studentId), eq(student.institutionId, institutionId)))
+    .limit(1);
+  return row;
 }
 
 export async function findEnrollment(id: string) {

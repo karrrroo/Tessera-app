@@ -1589,3 +1589,323 @@ retry after ~134s) during this same check — most likely concurrent background 
 repeatedly exercising the login form against the same account and tripping a real lockout
 policy, not a code defect; expected to clear on its own.
 
+
+## 2026-08-27 (cont'd) — Admin people-search, and glass on the admin screens
+
+**D-129. C13 is overridden on the user's explicit instruction: admin screens now carry the
+translucent glass treatment, bounded so that C13's stated reason survives the override.**
+C13 says admin screens use the full token layer but omit decorative glass and gradient
+effects, because those surfaces are dense and data-heavy and the app is already slow. The
+user asked for glass there three times and confirmed the override knowingly, so the
+treatment is applied — with limits chosen to keep C13's cost argument answered rather than
+ignored:
+
+- **Containers only.** A new `.glass-admin` class in `design/tessera.css`, applied to
+  exactly three elements: the sidebar (`shell/sidebar-nav.tsx`), the search panel
+  (`admin/people-search.tsx`), and the setup checklist (`admin/setup-checklist.tsx`).
+  Never a table row, a cell, or a list item — one `backdrop-filter` per row is what makes a
+  long list crawl, and the result rows in the search panel are deliberately plain.
+- **Verified at the cap, not over it.** Measured in Chromium: `/admin` renders exactly 3
+  elements with an active `backdrop-filter`, `/admin/roster` renders 1 (the sidebar alone),
+  `/gradebook` renders 1. Nothing sits behind the gradebook, the mosaic or a table, so
+  tessera-v2-FINAL's "flat `--bg-base` there" still holds; the glass sits over flat
+  `--bg-base`, never over a mesh.
+- **`.06` white, not the login card's `.10`, and the figure is measured rather than
+  assumed.** Compositing the alpha ink tokens over the alpha glass over each background:
+  at `.10`, `--ink-3` falls to 4.42:1 on the darker dark background — below AA. At `.06` it
+  holds 4.58:1. `--ink` reaches 14.7–17.1:1 and `--ink-2` 6.97–8.74:1 on the glass in both
+  themes.
+- **Secondary text inside these panels uses `--ink-2`, never `--ink-3`.** `--ink-3` cannot
+  meet AA on light backgrounds at all — 3.37–3.46:1 flat, essentially unchanged by the
+  glass (3.39–3.46:1). That is a pre-existing, app-wide condition rather than something the
+  glass introduced, and it is why the rule here is a token choice and not a glass tweak.
+- **Performance measured before and after** (Chromium CDP `Performance.getMetrics`, median
+  of 3 runs, 1440x900, after scrolling): `/admin` scripting 50.3ms → 50.3ms, rendering
+  11.1ms → 11.1ms, total task 203.0ms → 186.6ms. `/admin/roster` scripting 83.0ms →
+  77.3ms, rendering 39.1ms → 43.2ms, total task 291.1ms → 232.1ms. The one real cost is
+  +4.1ms of layout/style on the roster, which is the sidebar's blur; scripting and total
+  task did not regress.
+
+**D-130. No glass in this application has ever actually blurred in Chromium, and the cause
+is the CSS pipeline, not the CSS.** Writing both `backdrop-filter` and
+`-webkit-backdrop-filter` makes Lightning CSS (Tailwind v4's bundler) deduplicate them to a
+single declaration and, on this project's targets, keep the **`-webkit-` form only**.
+Chromium does not implement that prefix — `CSS.supports("-webkit-backdrop-filter",
+"blur(1px)")` returns `false` on Chrome 151, while the unprefixed feature returns `true`.
+The built stylesheet shows the collapse for `.glass-panel` exactly as it did for
+`.glass-admin`, so the login card, the Iter panel and the pill nav have been rendering as
+flat translucent fills with no blur. `.glass-admin` is fixed by declaring only the standard
+property, which leaves the bundler nothing to collapse to; `.glass-panel` is deliberately
+**left alone pending the user's decision**, because fixing it would make the login card,
+Iter panel and pill nav visibly blur for the first time — a change well outside the admin
+scope this round asked for.
+
+**D-131. Admin people-search is a new module, `admin/search.ts`, rather than more surface on
+`admin/repo.ts`.** The query shape is unlike anything else there — a dynamic term count, a
+computed rank, and a paged total — and it guarantees three properties worth stating where
+they can be reviewed: one row per person (the class label is a correlated subquery and
+class/subject matching is an `EXISTS`, never a join, so no one can be multiplied into
+several rows and corrupt the total); AND across whitespace-separated terms with OR across
+fields, so "Անի 9-Բ" narrows rather than widens; and an empty page for any query under two
+characters, with no code path by which a short or absent `q` reaches an unfiltered select.
+`GET /api/admin/teachers` changed shape from a bare array to `{ items, total }`, and the
+assignment grid's unfiltered list moved to `GET /api/admin/teachers/all` so that no query
+string on the search endpoint can be made to return a whole roster. Armenian needs no
+collation shim: `ILIKE` folds case correctly on this database (PostgreSQL 18, `C.UTF-8`) in
+both directions, verified against real rows.
+
+**D-132. Teacher search returns subject names in all three languages, not the single
+pre-resolved string the request's example showed.** Every other subject-bearing response in
+this app returns `nameHy`/`nameEn`/`nameRu` and lets the client pick by active locale.
+Returning one Armenian string here would reintroduce precisely the untranslated-copy defect
+that the term labels had two rounds ago.
+
+**D-133. Match highlighting has to be run against the transliterated text, not the raw
+query.** Person names are stored only in Armenian and transliterated at render time, so an
+Armenian query never appeared in the rendered Latin or Cyrillic string and nothing was
+highlighted — measured: 9 matching rows, 0 highlighted spans. The highlighter now tests each
+term and its transliterated form, using the same function that produced the visible text.
+
+## 2026-08-27 (cont'd) — The ambient gradient behind the admin shell
+
+**D-134. The admin glass was invisible for a structural reason, not a styling one, and the
+gradient is its prerequisite rather than a separate wish.** `backdrop-filter: blur()` samples
+what is *behind* an element; blurring a flat single-colour surface returns that same colour.
+D-129's panels were correctly configured and still read as nothing, because the page behind
+them was flat `--bg-base`. Measured on real composited pixels: with a flat background a point
+inside the panel and a point 40px outside differ by ~1.00:1 — identical. Over the new blooms
+they differ by **1.100:1 (dark)** and **1.119:1 (light)**. The earlier verification checked
+that the property was applied and never checked that it had anything to blur, which is the
+mistake worth remembering: an effect can be correctly declared and still be a no-op.
+
+**D-135. Two static radial blooms sit behind the admin shell, on the page background beneath
+the panels.** `AdminAmbient` (`components/admin/admin-ambient.tsx`), a fixed `-z-10` layer
+mounted from `(app)/admin/layout.tsx`, so it is scoped to admin routes and nothing else —
+verified absent on `/gradebook`. Both blooms use `--accent-tint`; opacity is `.30` on dark and
+`.18` on light, because the value that reads as subtle on dark reads as muddy on light.
+**Static — no drift, no animation**: this is a data screen, and the Iter panel's drifting
+blooms are a different element with a different job. No visible edge, measured rather than
+eyeballed: scanning background-only strips, the largest step between adjacent samples is
+**0-3/255 at 1440px** and **2-3/255 at 390px**, in both themes.
+
+**D-136. Panel translucency is theme-scoped: `.06` white on dark, `.55` on light.** A `.06`
+white film over a cream background is invisible regardless of what sits behind it, which was
+the other half of why the first attempt read as nothing.
+
+**D-137. `--ink-3` is now below AA on the admin glass in BOTH themes, where on flat dark it
+had passed.** Measured at the blooms' most intense point (a bloom centre, and both blooms
+overlapping) with the alpha ink composited over the alpha glass over the gradient over each
+of the four backgrounds: `--ink` 8.36-16.15:1 and `--ink-2` 5.25-7.02:1 both pass everywhere,
+while `--ink-3` lands at **3.27-3.42:1** — it passed at 4.58:1 on flat dark before the
+gradient raised the surface luminance. So the rule from D-129 tightens: inside these panels,
+and for page copy sitting over the blooms, secondary text uses `--ink-2` and never `--ink-3`.
+Applied to `setup-checklist.tsx`, `people-search.tsx` and the admin overview's own subtitle.
+
+**D-138. The "flat `--bg-base` behind data" rule is enforced by making each data surface paint
+its own opaque background, not by conditionally rendering the gradient.** The gradebook grid
+and the mark mosaic already did this (`gradebook-grid.tsx`, `mosaic.tsx`), which is why they
+needed no change and why `GradientMesh`'s own docstring could already state the rule. Seven
+admin surfaces did not and were leaking the gradient behind tabular data: the roster,
+subjects, years and scan-anomalies tables, the printable handout table, the assignment grid's
+scroll container, and the people-search results list. The student detail page's per-subject
+cards were the important one — a gradient behind a mark tile shifts the tile's perceived hue,
+and the tile's colour carries meaning, so that is a correctness defect rather than a taste
+one. All now paint flat `--bg-base`.
+
+**D-139. Declaring `backdrop-filter` and `-webkit-backdrop-filter` in two separate `@supports`
+blocks is what makes both survive the bundler.** D-130 recorded that Lightning CSS collapses
+the pair inside a single rule down to the `-webkit-` form alone, which Chromium does not
+implement. Splitting them across two `@supports` conditions leaves nothing to merge inside one
+block: the built stylesheet now emits **both** properties for `.glass-admin`, so Chromium gets
+the standard one and Safari the prefixed one. `.glass-panel` is still webkit-only and still
+deliberately untouched, pending the user's decision — the fix is now known and is two lines.
+
+**D-140. Performance, measured before the glass and after the glass plus gradient** (Chromium
+CDP `Performance.getMetrics`, median of 3 runs, 1440x900, after scrolling). `/admin`: scripting
+50.3 -> 52.3ms, rendering 11.1 -> 9.5ms, total task 203.0 -> 169.9ms. `/admin/roster`:
+scripting 83.0 -> 94.5ms, rendering 39.1 -> 38.4ms, total task 291.1 -> 230.2ms. Rendering did
+not regress on either screen and total task improved on both; the roster's scripting number
+rose by 11.5ms, which is CSS-independent work and most likely run-to-run variance rather than
+an effect of the blur, but it is recorded as measured rather than explained away.
+
+## 2026-08-27 (cont'd) — Full verification pass
+
+**D-141. The import-template link could never have worked, and it is the one functional
+defect this pass found.** `import-dropzone.tsx` rendered a plain
+`<a href="/api/admin/import/template?kind=…">`. `requireAuth` reads the `Authorization`
+header and nothing else — the access token lives in memory and the refresh cookie is
+path-scoped to `/api/auth/refresh` — so a browser navigation to that URL carries no
+credential and always returns 401 `UNAUTHENTICATED`. Roadmap ADM-4 calls downloading the
+template "the first thing that happens", so the documented entry point to the whole import
+flow was dead. Replaced with `adminApi.downloadImportTemplate`, the same authenticated-blob
+shape `downloadExport` already uses. Verified: both templates now download as 6750-byte
+`.xlsx` files. Found by treating an `<a href>` to an API path as a link to check for 404s —
+worth keeping in the sweep, because no page-level test would have caught it.
+
+**D-142. Seven admin screens were still hardcoded in English; all are now routed through the
+dictionary.** Institution, subjects, years, the class generator, scan anomalies, and both
+import pages. 27 new keys per locale (457 -> 484), three-locale parity maintained. Confirmed
+by re-running the locale sweep in `hy`: every one of those screens now reports clean, with
+the only remaining Latin text being genuine data (`anton@gmail.com`).
+
+**D-143. The roster table now scrolls itself rather than dragging the mobile content area.**
+At 390px it extended 223px past the viewport with its nearest horizontal scroller being the
+app shell's own content container, so the whole page slid sideways. Wrapped in
+`overflow-x-auto`, matching the settings sessions table. The other mobile spills
+(`/admin/assignments`, `/settings`, the gradebook's class pills) already had purpose-built
+scrollers and were left alone — a data table wider than a phone has to scroll somewhere, and
+choosing a card layout instead is a design decision with no precedent in `design/`.
+
+**D-144. Two role-gating results that looked like violations are correct behaviour.**
+`/api/me/credential` returns 200 for a teacher because teachers have ID cards by design
+(roadmap line 1232, "ID card — teacher", plus `GET /api/me/today`); `identity/service.ts`
+branches on both roles deliberately. And the missing `qr_credential` row flagged by
+`data:audit` is not a gap in the endpoint: `identity/repo.ts` creates the credential lazily on
+first request, so an admin-created student gets one the first time they open their ID. Both
+were bad test fixtures on my side, not defects.
+
+**D-145. Left alone deliberately, and reported rather than changed.** (a) The live roster has
+gained a student, `Khudaverdyan Anton / anton@gmail.com`, created 2026-08-27 14:11, whose
+given name and surname are stored the wrong way round (`first_name = 'Khudaverdyan'`) —
+reported, not corrected, per the standing instruction not to modify live rows; reversing the
+new-student form's field order is a design decision. (b) `zz.test.student.1@demo.tessera.am`,
+my own verification account, is still present. (c) `data:audit`'s three pre-existing seed gaps
+(no departed student with published marks, no assessment carrying a topic, one student without
+a QR credential) are unchanged and already recorded in `data-gaps.md`. (d) The gradebook's
+"Enter"/"Backspace" hint stays untranslated: those are the keys as printed on the keyboard.
+(e) `.glass-panel` still emits only `-webkit-backdrop-filter` (D-130/D-139) and so still does
+not blur in Chromium — the fix is known and two lines, and is waiting on a decision because it
+would make the login card and Iter panel visibly blur for the first time.
+
+**D-146. `user.locale` was changed on three demo accounts during this sweep and restored.**
+Switching locale through the UI writes `user.locale`, so walking every screen in three
+languages left ani, direktor and sargsyan on a different language than the seed set. All three
+were put back to `hy` through the app's own `PATCH /api/me/preferences`, verified by reading
+the rows back. Recorded because it is a live-data write, even though it is one the product
+makes routinely.
+
+**D-147. "The app hangs" was a full-viewport `feTurbulence` filter, not glass, and not the
+Web/Mobile toggle.** A1 asked for numbers before fixes, so: measured on a production build at
+1440x900, login page load, 3s window, median of four runs, with the mesh entry animation
+switched off so only the static page was in frame. Painting was 891ms as-is. Disabling one
+contributor at a time: grain hidden 301ms (-590ms), all four gradient blobs hidden 863ms
+(-28ms), blend mode forced to normal 878ms (-13ms), and **every `backdrop-filter` on the page
+forced to none 890ms — one millisecond**. The brief's own hypothesis, that more than three or
+four simultaneous compositing layers were the likeliest cause, is disproved by that last
+number; the measured count of simultaneously visible `backdrop-filter` elements never exceeded
+**3** on any screen (login 3, admin dashboard 3, admin roster 1, gradebook 1, student overview
+1, Iter panel open 2), so the four-or-more condition never occurs in the first place.
+
+`grain.tsx` painted one `<svg><rect>` filling its parent with an `feTurbulence` filter — on
+login, 1440x900 = 1,296,000 pixels of procedural three-octave noise generated per paint. It is
+now generated once into a 180x180 tile and repeated as an ordinary background image: 32,400
+pixels, a factor of 40, rasterised once and cached. `stitchTiles="stitch"` was already
+specified and was doing nothing because nothing tiled; 180 is chosen because 0.8 x 180 = 144
+exactly, so the tile is seamless with the frequency unchanged. Verified as an effect, not a
+declaration: the standard deviation of neighbouring-pixel luminance over a 256x128 patch is
+**1.104 before and 1.119 after**, and a scanline autocorrelation shows no peak at the 180px
+tile period, so the repeat is not visible. Login painting fell 891ms -> 597ms static and
+1267ms -> 855ms with the entry animation running; across the app the login page's own longest
+main-thread task fell **428ms -> 189ms**.
+
+**D-148. The §13 `top`/`left` conversion was correct and bought almost nothing on its own —
+recorded because the honest number matters more than the tidy story.** Four hits: (a)
+`gradient-mesh.tsx` animated `top`/`left` on four 950-1300px blobs, (b) `language-pill.tsx`
+transitioned `left`, (c) `sidebar-nav.tsx` transitions `width`, (d) `app-shell.tsx` transitions
+`margin-left`. (a) and (b) are converted to `transform`. Isolating the mesh entry animation by
+running the same build with and without `prefers-reduced-motion` (which it already switches
+itself off for) gave **+727ms of painting before the conversion and +727ms after** — the layout
+thrash was real but the blobs' actual cost was forcing the grain filter to re-evaluate every
+frame. After D-147 the same isolated measurement is **+258ms**. (c) and (d) are deliberately
+left as they are: §13 forbids animating layout properties "where transform will do", and here
+it will not — the rail genuinely changes width and the content region genuinely reflows to the
+new width, which `transform` translates without resizing. They are also not the hang: six rail
+toggles on the admin roster, the screen with the most content to relayout, cost 362ms of
+rendering and 833ms of painting in total, and only on an explicit user action.
+
+The mesh conversion needed container query units. A percentage means different things to `left`
+(the containing block's width) and to `translate` (the element's own width), so the delta from
+frame centre to resting position is not expressible as a self-relative percentage; `1cqw` is 1%
+of the nearest size-container's width, which is the unit `left` was already in. Position
+(1400ms) and scale (700ms) need different durations and one element cannot run two animations
+on `transform`, so each blob is now a pair of elements. The `language-pill` swap is exact
+rather than approximate, and was verified by measuring the indicator's rect in all three
+locales before the change: `left` computed to 2px / 38px / 74px, steps of exactly 36px, and the
+indicator's own width is exactly 36px — so `translateX(n * 100%)` lands on the same pixel. The
+file's previous comment argued the opposite; it is right in general and wrong for this
+geometry, and has been corrected in place.
+
+**D-149. No render loops. Zero `useEffect`/`useLayoutEffect` in `frontend/src` has a missing
+dependency array.** Seven effects do set state they also list as a dependency
+(`admin/roster/page.tsx`, four in `export-panel.tsx`, `iter-panel.tsx`'s `ThinkingPill`), and
+all seven are the guarded "initialise once when async data arrives" idiom — `if (data &&
+!value) setValue(...)` — which converges after one extra render because React bails out on an
+identical value. The roster one only writes state from inside a keydown handler. Consistent
+with the traces: scripting is a small fraction of every measured window, where a real loop
+would consume all of it.
+
+**D-150. Network was never the problem either.** Per-screen request counts on a production
+build: login (static), admin dashboard 23, admin roster 19-21, teacher gradebook 18, and the
+admin search **1 request for an eight-character query** (the 300ms debounce collapses the
+keystrokes). Slowest single API call observed: `/api/teacher/classes` 794ms, `/api/admin/
+subjects` 687ms, `/api/admin/roster` 373ms, `/api/admin/students?q=` 251ms. Nothing in the
+"dozens of requests, or one taking seconds" range the brief flagged.
+
+**D-151. `npm start` runs the frontend in DEVELOPMENT mode, and this is the most likely reason
+the app feels like it hangs in real use.** `package.json`'s root `start` script runs `npm run
+start -w frontend`, and `frontend/package.json` defines `"start": "next dev"`. A `next start`
+script exists as `start:prod` but nothing invokes it. The difference is not marginal. Measured
+on the same machine, the same login page, the same 3s window: development painted **3553ms**
+with a **683ms** longest task on first visit and 1780ms on a warm one, against **1288ms** and
+**428ms** for a production build before the grain fix, and 966ms / 189ms after it. Development
+mode also produced a **1159ms** blocking task on the student overview that never reproduced on
+a production build. Left alone rather than changed: which server `npm start` should launch is a
+project convention, not a defect I should decide by editing, and `start:prod` already exists
+for whoever wants it. Flagged because every A1 number is meaningless unless it says which of
+the two it came from.
+
+**D-152. Only two of 202 students were findable by search, because names are stored in Armenian
+and displayed transliterated — the admin could not type what the screen showed them.** Reported
+live as "the database contains 200+ students but only 2 are accessible". Located by counting
+rather than guessing: the database holds 202 students, all 202 with a `user` row, all 202 with
+an active enrollment, all in one institution; `GET /api/admin/roster` returned all **202** and
+the roster page rendered all **202** rows. The fault was entirely in the people-search, and the
+numbers name it exactly — Armenian `ան` returned 200 results, Latin `an` returned **2**, Latin
+`Abrahamyan` returned **0**, Latin `Artyom` returned **0**. The two that Latin could find are
+the only two students whose names are *stored* in Latin (`Khudaverdyan Anton` and the test
+account), which is why the symptom read as "only 2 students exist".
+
+`student.first_name` holds `Արտյոմ`; there is no `first_name_en` and C2 forbids adding one, so
+the English and Russian UIs transliterate at render time. The search sent the typed query
+straight to `ILIKE` against the Armenian columns. Fixed in `backend/src/lib/name-search.ts` by
+rendering the stored Armenian to Latin and Russian *inside the query* and matching against all
+three scripts, plus both orders of the joined full name. The opposite direction — transliterating
+the query back into Armenian — cannot work, because the mapping is many-to-one: "ts" is both Ծ
+and Ց, "k" is both Կ and Ք, "ch" is both Ճ and Չ. Done in SQL rather than in application code so
+that ranking, the total count and paging stay server-side; filtering in JS would mean fetching
+every person on every keystroke, the exact roster-dump failure `admin/search.ts` exists to
+prevent. The rank tiers were widened to see the same scripts, or a Latin surname query would
+match at tier 2 and sort below unrelated substring hits. The roster's own `q` filter had the
+identical flaw and got the identical fix.
+
+After: Latin `an` 2 -> **201**, `yan` 1 -> **201**, `Abrahamyan` 0 -> **4**, `Artyom` 0 -> **4**,
+`Artyom Abrahamyan` -> 1, `Abrahamyan Artyom` -> 1, Cyrillic `Абраамян` -> 4, `Погосян` -> 4,
+`Hakobyan` -> 7, `Khachatur` (the ու digraph) -> 1, and paging on `yan` gives total=201 with two
+20-row pages and zero overlap. `Abrahamyan 9-Ա` correctly returns 0: the four Abrahamyan
+students are in 12-Ա, 12-Ա, 10-Բ and 10-Գ, and terms are ANDed.
+
+**D-153. `scripts/name-search-check.mjs` (`npm run name-search:check`) exists because the
+feature is only true while two implementations agree.** The whole property being sold is "what
+you see is what you can search", which holds only while the SQL transliteration in
+`backend/src/lib/name-search.ts` matches the UI's in
+`frontend/src/i18n/transliterate-name.ts`. The check compares them for every person in the
+database, in both scripts, and fails loudly on any drift. Current output: **888 name renderings
+compared, 0 mismatches** across 202 students and 20 teachers.
+
+**D-154. A pre-existing discrepancy in the UI's own Russian transliteration, reported and not
+changed.** `transliterate-name.ts`'s header comment gives `Հակոբյան -> Акопян` as the worked
+example of the Հ rule, but the table maps `բ -> б`, so the code actually renders **Акобян**.
+The search matches what the code renders (`Акобян` returns 7 students, `Акопян` returns 0),
+which is the correct behaviour for a search — it must agree with what is on screen. Whether
+`բ` should render as `п` in Russian personal names is a transliteration-policy decision, not
+mine to make, and changing it would move every Russian-rendered surname in the product.
