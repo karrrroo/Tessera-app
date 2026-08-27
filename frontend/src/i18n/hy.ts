@@ -38,7 +38,9 @@ const dict = {
     "analytics": "Դասարանի վերլուծություն",
     "queue": "Հավաստագրերի հայտեր",
     "settings": "Կարգավորումներ",
-    "admin": "Ադմինիստրացիա"
+    "admin": "Ադմինիստրացիա",
+    "showQr": "Ցույց տալ QR կոդը",
+    "addAssessment": "Ավելացնել գնահատում"
   },
   "common": {
     "roleStudent": "Աշակերտ",
@@ -93,7 +95,9 @@ const dict = {
     "firstBody": "Ուսումնական հաստատության տված ժամանակավոր գաղտնաբառը պետք է փոխվի առաջին մուտքի ժամանակ։",
     "firstCredSource": "Մուտքի տվյալները տրամադրում է դպրոցի ադմինիստրացիան.",
     "saveGo": "Պահպանել և շարունակել",
-    "signOut": "Ելք"
+    "signOut": "Ելք",
+    "showPw": "Ցույց տալ գաղտնաբառը",
+    "hidePw": "Թաքցնել գաղտնաբառը"
   },
   "bg": {
     "title": "Ֆոն",
@@ -105,6 +109,7 @@ const dict = {
   "set": {
     "title": "Կարգավորումներ",
     "sub": "Կարգավորումները պահվում են այս սարքի համար։",
+    "phase12Note": "Հաշիվ / ծանուցումներ / աջակցություն / վիջեթներ կլինեն ավելի ուշ — առայժմ միայն տեսք, լեզու և սեսիաներ։",
     "gAccount": "Հաշիվ",
     "gLook": "Տեսք",
     "gLang": "Լեզու",
@@ -450,7 +455,30 @@ const dict = {
     "subjectsCount": { "one": "{count} առարկա", "few": "{count} առարկա", "many": "{count} առարկա", "other": "{count} առարկա" },
     "classesCount": { "one": "{count} դասարան", "few": "{count} դասարան", "many": "{count} դասարան", "other": "{count} դասարան" },
     "studentsCount": { "one": "{count} աշակերտ", "few": "{count} աշակերտ", "many": "{count} աշակերտ", "other": "{count} աշակերտ" },
-    "assignmentsCount": { "one": "{count} նշանակում", "few": "{count} նշանակում", "many": "{count} նշանակում", "other": "{count} նշանակում" }
+    "assignmentsCount": { "one": "{count} նշանակում", "few": "{count} նշանակում", "many": "{count} նշանակում", "other": "{count} նշանակում" },
+    "createYearFirst": "Նախ ստեղծեք ուսումնական տարին։",
+    "noClassesYet": "Դասարաններ դեռ չկան։",
+    "classesTitle": "Դասարաններ — {year}",
+    "rosterTitle": "Ուսանողների ցուցակ — {year}",
+    "allClasses": "Բոլոր դասարանները",
+    "colName": "Անուն",
+    "colClass": "Դասարան",
+    "colStatus": "Կարգավիճակ",
+    "colEmail": "Էլ. փոստ",
+    "statusActive": "Ընթացիկ",
+    "statusTransferred": "Տեղափոխված",
+    "statusDeparted": "Հեռացած",
+    "statusGraduated": "Ավարտած",
+    "btnTransfer": "Տեղափոխել",
+    "btnDepart": "Հեռացնել",
+    "btnCancel": "Չեղարկել",
+    "transferTitle": "Տեղափոխել {name}-ին",
+    "chooseClass": "Ընտրեք դասարան…",
+    "confirmDepart": "Նշել {name}-ին որպես հեռացած։ Սա երբեք չի ջնջում նրա գրառումը։",
+    "assignmentsTitle": "Ուսուցիչների նշանակումներ — {year}",
+    "colTeacher": "Ուսուցիչ",
+    "noTeachersYet": "Ուսուցիչներ դեռ չկան — նախ ներմուծեք։",
+    "removeAssignment": "Սեղմեք հանելու համար"
   }
 } as const;
 

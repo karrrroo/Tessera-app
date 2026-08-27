@@ -118,11 +118,28 @@ export function IterPanel() {
     listRef.current.scrollTo({ top: listRef.current.scrollHeight });
   }, [messages, sending]);
 
+  // Every sibling sheet (mark-history-sheet.tsx, qr-sheet.tsx,
+  // cell-history-sheet.tsx) closes on Escape; this one never did.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closePanel();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, closePanel]);
+
   if (!open || !user) return null;
 
   const isEmpty = messages.length === 0 && !sending;
   const chips = user.role === "teacher" ? t.iter.tChips : user.role === "admin" ? t.iter.aChips : t.iter.sChips;
   const firstName = (user.firstName ?? "").trim();
+  // A real bug, found live: admin accounts have no firstName/lastName at
+  // all (those live on the student/teacher sub-tables only), so this fell
+  // back to a *hardcoded* "Student" for every nameless user regardless of
+  // role — an admin opening Iter was greeted "Hello, Student." Falls back
+  // to a role-correct label instead.
+  const roleFallback = user.role === "teacher" ? t.common.roleTeacher : user.role === "admin" ? t.common.roleAdmin : t.common.roleStudent;
 
   function submit() {
     const text = draft;
@@ -184,7 +201,7 @@ export function IterPanel() {
               <div className="relative flex flex-col items-center gap-1 text-center">
                 <span className="font-serif text-xl font-semibold" style={{ color: "var(--iter-fg)" }}>
                   {t.iter.hi}
-                  {firstName || t.common.roleStudent}
+                  {firstName || roleFallback}
                 </span>
                 <span className="text-sm" style={{ color: "var(--iter-fg)" }}>
                   {t.iter.line2}

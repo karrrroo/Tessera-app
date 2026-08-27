@@ -21,7 +21,7 @@ export default function SettingsPage() {
           {t.set.sub}
         </p>
         <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
-          Account/notifications/support/widgets arrive in Phase 12 — appearance, language and sessions only for now.
+          {t.set.phase12Note}
         </p>
       </div>
 

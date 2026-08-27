@@ -29,7 +29,9 @@ const dict = {
     "analytics": "Class analytics",
     "queue": "Credential requests",
     "settings": "Settings",
-    "admin": "Administration"
+    "admin": "Administration",
+    "showQr": "Show QR",
+    "addAssessment": "Add assessment"
   },
   "common": {
     "roleStudent": "Student",
@@ -84,7 +86,9 @@ const dict = {
     "firstBody": "The temporary password issued by your institution must be changed at first sign-in.",
     "firstCredSource": "Your credentials come from the school administration.",
     "saveGo": "Save and continue",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "showPw": "Show password",
+    "hidePw": "Hide password"
   },
   "bg": {
     "title": "Background",
@@ -96,6 +100,7 @@ const dict = {
   "set": {
     "title": "Settings",
     "sub": "Settings are stored for this device.",
+    "phase12Note": "Account, notifications, support and widgets are coming later — appearance, language and sessions only for now.",
     "gAccount": "Account",
     "gLook": "Appearance",
     "gLang": "Language",
@@ -441,7 +446,30 @@ const dict = {
     "subjectsCount": { "one": "{count} subject", "few": "{count} subjects", "many": "{count} subjects", "other": "{count} subjects" },
     "classesCount": { "one": "{count} class", "few": "{count} classes", "many": "{count} classes", "other": "{count} classes" },
     "studentsCount": { "one": "{count} student", "few": "{count} students", "many": "{count} students", "other": "{count} students" },
-    "assignmentsCount": { "one": "{count} assignment", "few": "{count} assignments", "many": "{count} assignments", "other": "{count} assignments" }
+    "assignmentsCount": { "one": "{count} assignment", "few": "{count} assignments", "many": "{count} assignments", "other": "{count} assignments" },
+    "createYearFirst": "Create an academic year first.",
+    "noClassesYet": "No classes yet.",
+    "classesTitle": "Classes — {year}",
+    "rosterTitle": "Roster — {year}",
+    "allClasses": "All classes",
+    "colName": "Name",
+    "colClass": "Class",
+    "colStatus": "Status",
+    "colEmail": "Email",
+    "statusActive": "Active",
+    "statusTransferred": "Transferred",
+    "statusDeparted": "Departed",
+    "statusGraduated": "Graduated",
+    "btnTransfer": "Transfer",
+    "btnDepart": "Depart",
+    "btnCancel": "Cancel",
+    "transferTitle": "Transfer {name}",
+    "chooseClass": "Choose a class…",
+    "confirmDepart": "Mark {name} as departed? This never deletes their record.",
+    "assignmentsTitle": "Teacher assignments — {year}",
+    "colTeacher": "Teacher",
+    "noTeachersYet": "No teachers yet — import some first.",
+    "removeAssignment": "Click to remove"
   }
 } as const;
 

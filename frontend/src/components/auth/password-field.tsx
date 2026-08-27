@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/locale-provider";
 
 export function PasswordField({
   label,
@@ -14,6 +15,7 @@ export function PasswordField({
   autoComplete?: string;
 }) {
   const [revealed, setRevealed] = useState(false);
+  const t = useT();
   return (
     <label className="block space-y-1">
       <span className="text-sm text-ink-2">{label}</span>
@@ -38,7 +40,7 @@ export function PasswordField({
           type="button"
           onClick={() => setRevealed((r) => !r)}
           className="px-3 text-ink-3 hover:text-ink-2"
-          aria-label={revealed ? "Hide password" : "Show password"}
+          aria-label={revealed ? t.auth.hidePw : t.auth.showPw}
         >
           {revealed ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">

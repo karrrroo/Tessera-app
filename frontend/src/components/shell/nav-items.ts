@@ -28,15 +28,24 @@ const STATIC_LABELS: Partial<Record<NavItemId, string>> = {};
 // placeholder, not a finalized spec, and should be revisited once the
 // screens it points at are actually built (Phases 6-12). The QR/plus button
 // itself is not a nav item — it's the pill's docked centre button (§9).
+// "analytics" was a real bug, not a gap: /analytics was reachable via this
+// nav item on both lists below, but no such route (or any component
+// rendering t.scr.an, the dictionary section that assumed one) has ever
+// existed — confirmed with `grep -rn "analytics" frontend/src` finding
+// nothing but this wiring and unused translation keys. Not in the roadmap,
+// PRD, or any design brief as a screen — removed rather than built, per the
+// project's own "no invented scope" rule. This leaves the teacher's mobile
+// pill at 3 items, one short of brief §9's 4 — flagged, not silently
+// filled with a guess at a 4th (see docs/decisions.md).
 const SIDEBAR_ITEMS: Record<"student" | "teacher" | "admin", NavItemId[]> = {
   student: ["overview", "subjects", "archive", "creds", "id", "settings"],
-  teacher: ["gradebook", "analytics", "queue", "settings"],
+  teacher: ["gradebook", "queue", "settings"],
   admin: ["admin", "queue", "settings"],
 };
 
 const MOBILE_TAB_ITEMS: Record<"student" | "teacher" | "admin", NavItemId[]> = {
   student: ["overview", "subjects", "archive", "settings"],
-  teacher: ["gradebook", "analytics", "queue", "settings"],
+  teacher: ["gradebook", "queue", "settings"],
   admin: ["admin", "queue", "settings"],
 };
 

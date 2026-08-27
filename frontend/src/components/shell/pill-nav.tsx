@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { NavItem } from "./nav-items";
 import { NavIcon } from "./nav-icon";
 import { GlassLayered } from "@/components/design/glass-layered";
+import { useT } from "@/i18n/locale-provider";
 
 // Floating pill bottom nav with a docked centre button (brief §9 — the
 // section revised most across the design-brief chain; see
@@ -14,6 +15,7 @@ import { GlassLayered } from "@/components/design/glass-layered";
 // disabled until then.
 export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "teacher" | "admin" }) {
   const pathname = usePathname();
+  const t = useT();
   const [left, right] = [items.slice(0, 2), items.slice(2, 4)];
 
   const renderGroup = (group: NavItem[]) => (
@@ -30,12 +32,21 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
           <Link
             key={item.id}
             href={item.href}
-            className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium transition-colors"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium transition-colors"
             style={{
               background: active ? "var(--accent)" : "transparent",
               color: active ? "var(--accent-fg)" : "var(--ink-3)",
               paddingLeft: active ? 16 : 8,
               paddingRight: active ? 16 : 8,
+              // A real bug, found live at 390px: an active item's expanded
+              // label had nothing stopping it from taking space at its
+              // siblings' expense — every item just sized to its own
+              // content with no floor. Below 44×44, that's under the
+              // minimum tap target. Inactive items get a fixed box that
+              // can't shrink further; the active one is still free to grow
+              // for its label (justify-evenly above still keeps them apart).
+              flex: active ? "0 1 auto" : "0 0 44px",
+              minHeight: 44,
             }}
           >
             <NavIcon d={item.icon} size={active ? 24 : 22} />
@@ -66,7 +77,7 @@ export function PillNav({ items, role }: { items: NavItem[]; role: "student" | "
       </GlassLayered>
       <button
         type="button"
-        aria-label={role === "student" ? "Show QR" : "Add assessment"}
+        aria-label={role === "student" ? t.nav.showQr : t.nav.addAssessment}
         className="pointer-events-auto absolute flex items-center justify-center rounded-full text-white"
         style={{
           left: "50%",

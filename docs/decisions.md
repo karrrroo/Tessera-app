@@ -1572,3 +1572,20 @@ confirmed via a read-only query — is Քրիստինե Խաչատրյան (Kris
 all. Not fixed; the underlying data state needs the user's decision (see the report), not
 a frontend workaround.
 
+**D-128. Restored all four demo buttons, keyed by email rather than by role or by the
+live `must_change_password` flag** (`frontend/src/components/auth/demo-row.tsx`) — the
+flag can no longer distinguish `nor@` from `ani@` per D-127, so the fourth ("Առաջին
+մուտք") button is now identified by its specific seed email, always shown, in the fixed
+order the four were specified in. This fixes the duplicate label. It does not fix the
+underlying account: a direct login attempt against `nor@demo.tessera.am` with the shared
+seed password now returns `AUTH_INVALID_CREDENTIALS` (401), not just a cleared flag — its
+actual password hash no longer matches the seed password either, consistent with a
+background test agent having completed a real password-change form against this account
+rather than just viewing it. The restored button will therefore sign in as `nor@` with a
+password neither the seed nor any password the user set — it currently cannot succeed at
+all. Per standing instruction, not resetting this account's password or flag; reported to
+the user instead. Separately, `ani@demo.tessera.am` returned `AUTH_ACCOUNT_LOCKED` (423,
+retry after ~134s) during this same check — most likely concurrent background audit agents
+repeatedly exercising the login form against the same account and tripping a real lockout
+policy, not a code defect; expected to clear on its own.
+

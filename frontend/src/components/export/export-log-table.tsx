@@ -7,9 +7,22 @@ import { useAsyncData } from "@/lib/use-async-data";
 // EXP-5: who, what scope, when, how many marks — "when someone asks
 // whether a term was submitted, this answers it." A dense table (C13),
 // admin-only.
+const SCOPE_LABEL_KEY = {
+  "class-subject-term": "s1",
+  "class-term": "s2",
+  "institution-term": "s3",
+} as const;
+
 export function ExportLogTable() {
   const t = useT();
   const { data: rows, error, retry } = useAsyncData(() => exportApi.getLogs(50), []);
+  // A real bug, found live: this rendered the raw enum value
+  // ("institution-term") instead of the same localized label the export
+  // form above it already uses for the identical set of scopes.
+  const scopeLabel = (scope: string) => {
+    const key = SCOPE_LABEL_KEY[scope as keyof typeof SCOPE_LABEL_KEY];
+    return key ? t.exp[key] : scope;
+  };
 
   if (error) {
     return (
@@ -55,7 +68,7 @@ export function ExportLogTable() {
                       {who}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2" style={{ color: "var(--ink-2)" }}>
-                      {row.scope.scope}
+                      {scopeLabel(row.scope.scope)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-mono" style={{ color: "var(--ink-3)" }}>
                       {row.format}

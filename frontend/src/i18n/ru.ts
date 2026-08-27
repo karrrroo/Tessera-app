@@ -29,7 +29,9 @@ const dict = {
     "analytics": "Аналитика класса",
     "queue": "Заявки",
     "settings": "Настройки",
-    "admin": "Администрирование"
+    "admin": "Администрирование",
+    "showQr": "Показать QR",
+    "addAssessment": "Добавить оценку"
   },
   "common": {
     "roleStudent": "Ученик",
@@ -84,7 +86,9 @@ const dict = {
     "firstBody": "Временный пароль, выданный заведением, нужно сменить при первом входе.",
     "firstCredSource": "Учётные данные предоставляет администрация школы.",
     "saveGo": "Сохранить и продолжить",
-    "signOut": "Выйти"
+    "signOut": "Выйти",
+    "showPw": "Показать пароль",
+    "hidePw": "Скрыть пароль"
   },
   "bg": {
     "title": "Фон",
@@ -96,6 +100,7 @@ const dict = {
   "set": {
     "title": "Настройки",
     "sub": "Настройки сохраняются для этого устройства.",
+    "phase12Note": "Аккаунт, уведомления, поддержка и виджеты появятся позже — сейчас доступны только оформление, язык и сессии.",
     "gAccount": "Аккаунт",
     "gLook": "Вид",
     "gLang": "Язык",
@@ -441,7 +446,30 @@ const dict = {
     "subjectsCount": { "one": "{count} предмет", "few": "{count} предмета", "many": "{count} предметов", "other": "{count} предмета" },
     "classesCount": { "one": "{count} класс", "few": "{count} класса", "many": "{count} классов", "other": "{count} класса" },
     "studentsCount": { "one": "{count} ученик", "few": "{count} ученика", "many": "{count} учеников", "other": "{count} ученика" },
-    "assignmentsCount": { "one": "{count} назначение", "few": "{count} назначения", "many": "{count} назначений", "other": "{count} назначения" }
+    "assignmentsCount": { "one": "{count} назначение", "few": "{count} назначения", "many": "{count} назначений", "other": "{count} назначения" },
+    "createYearFirst": "Сначала создайте учебный год.",
+    "noClassesYet": "Классов пока нет.",
+    "classesTitle": "Классы — {year}",
+    "rosterTitle": "Список учеников — {year}",
+    "allClasses": "Все классы",
+    "colName": "Имя",
+    "colClass": "Класс",
+    "colStatus": "Статус",
+    "colEmail": "Эл. почта",
+    "statusActive": "Учится",
+    "statusTransferred": "Переведён",
+    "statusDeparted": "Выбыл",
+    "statusGraduated": "Окончил",
+    "btnTransfer": "Перевести",
+    "btnDepart": "Отчислить",
+    "btnCancel": "Отмена",
+    "transferTitle": "Перевести {name}",
+    "chooseClass": "Выберите класс…",
+    "confirmDepart": "Отметить {name} как выбывшего? Это никогда не удаляет его запись.",
+    "assignmentsTitle": "Назначения учителей — {year}",
+    "colTeacher": "Учитель",
+    "noTeachersYet": "Учителей пока нет — сначала импортируйте их.",
+    "removeAssignment": "Нажмите, чтобы убрать"
   }
 } as const;
 

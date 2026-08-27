@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { adminApi, type SchoolClass } from "@/lib/api/admin";
 import { useCurrentAcademicYear } from "@/components/admin/use-current-academic-year";
 import { ClassGenerator } from "@/components/admin/class-generator";
+import { useT } from "@/i18n/locale-provider";
 
 export default function ClassesPage() {
+  const t = useT();
   const year = useCurrentAcademicYear();
   const [classes, setClasses] = useState<SchoolClass[] | null>(null);
 
@@ -25,7 +27,7 @@ export default function ClassesPage() {
   if (year === null) {
     return (
       <main className="p-8 text-sm" style={{ color: "var(--ink-3)" }}>
-        Create an academic year first.
+        {t.admin.createYearFirst}
       </main>
     );
   }
@@ -35,7 +37,7 @@ export default function ClassesPage() {
   return (
     <main className="mx-auto w-full max-w-2xl space-y-6 p-8">
       <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-        Classes — {year.label}
+        {t.admin.classesTitle.replace("{year}", year.label)}
       </h1>
 
       <ClassGenerator academicYearId={year.id} onGenerated={() => reload(year.id)} />
@@ -49,7 +51,7 @@ export default function ClassesPage() {
           ))}
           {sorted.length === 0 && (
             <span className="text-sm" style={{ color: "var(--ink-3)" }}>
-              No classes yet.
+              {t.admin.noClassesYet}
             </span>
           )}
         </div>
