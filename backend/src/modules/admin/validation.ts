@@ -66,14 +66,42 @@ export const studentCreateSchema = z.object({
 // with none is a perfectly valid record — someone hired before the timetable
 // is set. So there is no classId here, and no birthDate either: the schema
 // has no column for a teacher's date of birth.
+// Creating one teacher account, with what they teach.
+//
+// NO EMIS ID. Tessera replaces that system, so asking an admin to type an
+// identifier from the thing being replaced is backwards — the column stays
+// nullable in the schema for imported records, but nothing this product's own
+// UI creates will populate it.
+//
+// Instead: the subjects they teach and the classes they teach them to. Those
+// two lists are a cross product — three subjects across four classes is twelve
+// teaching assignments — which is what `teaching_assignment` actually stores
+// (one row per class + subject + year). Both are optional: a teacher hired
+// before the timetable is settled is a valid record, and assignments can still
+// be added later on /admin/assignments.
 export const teacherCreateSchema = z.object({
   firstName: z.string().trim().min(1),
   lastName: z.string().trim().min(1),
   patronymic: z.string().trim().min(1).optional(),
   email: z.string().trim().email(),
-  // `teacher.emis_teacher_id` is nullable, and the admin may not have it yet.
-  emisTeacherId: z.string().trim().min(1).optional(),
-});
+  // Capped so one request cannot try to write an unbounded number of
+  // assignment rows. 20 x 40 is far past any real timetable.
+  subjectIds: z.array(z.string().uuid()).max(20).optional().default([]),
+  classIds: z.array(z.string().uuid()).max(40).optional().default([]),
+  // Which year the assignments belong to. Required only when there is
+  // something to assign, because `teaching_assignment.academic_year_id` is not
+  // nullable and guessing the year would silently put a timetable in the wrong
+  // one.
+  academicYearId: z.string().uuid().optional(),
+}).refine(
+  (v) => (v.subjectIds.length === 0 && v.classIds.length === 0) || Boolean(v.academicYearId),
+  { message: "academicYearId is required when subjects or classes are given", path: ["academicYearId"] },
+).refine(
+  // Subjects without classes, or classes without subjects, describes no
+  // assignment at all. Rejecting it is kinder than silently creating none.
+  (v) => (v.subjectIds.length > 0) === (v.classIds.length > 0),
+  { message: "give both subjects and classes, or neither", path: ["subjectIds"] },
+);
 
 export const assignmentCreateSchema = z.object({
   teacherId: z.string().uuid(),

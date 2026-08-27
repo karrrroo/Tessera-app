@@ -272,32 +272,45 @@ export async function addMidYearStudent(
 }
 
 /**
- * Creates one teacher account: a `user` row and a `teacher` row, in one
- * transaction, with a temporary password returned exactly once.
+ * Creates one teacher account, plus the teaching assignments that say what they
+ * teach.
  *
- * The same contract as `addMidYearStudent` and `reissueClassCredentials`: the
- * plaintext is generated here, shown to the admin once, and never stored or
- * recoverable afterwards; the account starts with `mustChangePassword` so the
- * first thing the teacher does is replace it.
+ * The account is the primary action and must not fail because of a timetable
+ * clash, so it is committed on its own first and the assignments are attempted
+ * afterwards. `teaching_assignment` has `unique (class_id, subject_id,
+ * academic_year_id)` — one teacher per class-subject-year — so some of the
+ * requested pairs may already belong to another teacher. Those are SKIPPED and
+ * reported, not treated as an error: losing a freshly created account (with a
+ * temporary password already shown to the admin) because 9-Ա's maths is taken
+ * would be a much worse outcome than telling them which pairs did not stick.
  *
- * No class and no teaching assignment. A teacher's classes are assignments
- * made on /admin/assignments against a specific academic year, subject and
- * term, and a teacher with none is a valid record — someone hired before the
- * timetable exists. Bundling an assignment into account creation would mean
- * either inventing a default or refusing to create a teacher until the
- * timetable is ready.
+ * Subjects x classes is a cross product: three subjects across four classes is
+ * twelve assignments. That is the shape `teaching_assignment` stores.
  *
- * A duplicate email needs no handling here: `user.email` is citext UNIQUE and
- * db/pg-errors.ts already maps that constraint to 409 USER_EMAIL_TAKEN, which
- * is how the student path reports it too.
+ * The temporary password contract is unchanged: generated here, shown to the
+ * admin exactly once, never stored, and the account starts with
+ * `mustChangePassword`.
+ *
+ * A duplicate email needs no handling — `user.email` is citext UNIQUE and
+ * db/pg-errors.ts maps that constraint to 409 USER_EMAIL_TAKEN, the same way
+ * the student path reports it.
  */
 export async function addTeacher(
   institutionId: string,
-  data: { firstName: string; lastName: string; patronymic?: string; email: string; emisTeacherId?: string },
+  data: {
+    firstName: string;
+    lastName: string;
+    patronymic?: string;
+    email: string;
+    subjectIds: string[];
+    classIds: string[];
+    academicYearId?: string;
+  },
 ) {
   const temporaryPassword = generateTemporaryPassword();
   const passwordHash = await hashPassword(temporaryPassword);
-  return db.transaction(async (tx) => {
+
+  const createdTeacher = await db.transaction(async (tx) => {
     const [u] = await tx
       .insert(user)
       .values({ email: data.email, passwordHash, role: "teacher", mustChangePassword: true })
@@ -310,11 +323,49 @@ export async function addTeacher(
         firstName: data.firstName,
         lastName: data.lastName,
         patronymic: data.patronymic,
-        emisTeacherId: data.emisTeacherId,
       })
       .returning();
-    return { teacher: t, login: u.email, temporaryPassword };
+    return { teacher: t, login: u.email };
   });
+
+  const assignments: { created: number; skipped: { classId: string; subjectId: string }[] } = {
+    created: 0,
+    skipped: [],
+  };
+
+  if (data.academicYearId && data.subjectIds.length > 0 && data.classIds.length > 0) {
+    for (const classId of data.classIds) {
+      for (const subjectId of data.subjectIds) {
+        try {
+          await repo.createAssignment({
+            teacherId: createdTeacher.teacher.id,
+            classId,
+            subjectId,
+            academicYearId: data.academicYearId,
+          });
+          assignments.created += 1;
+        } catch (err) {
+          // 23505 here means this class already has a teacher for this subject
+          // this year. Anything else is a real failure and must not be
+          // swallowed as "skipped".
+          if (isUniqueViolation(err)) assignments.skipped.push({ classId, subjectId });
+          else throw err;
+        }
+      }
+    }
+  }
+
+  return { teacher: createdTeacher.teacher, login: createdTeacher.login, temporaryPassword, assignments };
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  // Drizzle wraps the driver error, so the code can sit on `.cause` rather
+  // than on the thrown object — the same wrapping db/pg-errors.ts documents.
+  const codeOf = (e: unknown) =>
+    typeof e === "object" && e !== null && "code" in e ? (e as { code?: unknown }).code : undefined;
+  if (codeOf(err) === "23505") return true;
+  const cause = err instanceof Error ? (err as { cause?: unknown }).cause : undefined;
+  return codeOf(cause) === "23505";
 }
 
 // `enrollment` has an unconditional `unique(student_id, academic_year_id)`

@@ -2437,3 +2437,56 @@ deleted the account afterwards and asserted the teacher and user counts returned
 Route gating came for free from D-177's map: `/admin/teachers/new` is under `/admin`, so the
 longest-prefix rule already makes it admin-only, and the sweep confirms a student or teacher
 opening it gets the not-found screen while an admin gets the form.
+
+**D-190. The teacher form asks what a teacher teaches, not for an EMIS id.** Corrected on
+instruction: "it shouldn't ask for an EMIS ID, because Tessera replaces that system. Instead, it
+should ask for the subject(s) the teacher teaches and the grade/class levels they teach." That is
+right, and the original field was backwards — asking an admin to type an identifier issued by the
+system this product replaces. `teacher.emis_teacher_id` stays in the schema and stays nullable,
+because imported records may carry one; nothing this product's own UI creates populates it any
+more.
+
+WHAT REPLACED IT. Two multi-selects, subjects and classes, whose CROSS PRODUCT becomes teaching
+assignments — three subjects across four classes is twelve rows — because that is exactly what
+`teaching_assignment` stores, one row per class + subject + academic year. This also reverses
+D-189's "no class picker": that reasoning (a teacher's classes are assignments made later) was
+defensible but it made the common case two screens long, and the user asked for one.
+
+Classes are grouped by grade with a whole-grade toggle. "Which classes" is nearly always answered
+a grade at a time, and ticking eight boxes to say "all of grade 9" is busywork. The form also
+states how many assignments it will create before submitting, so the cross product is visible
+rather than a surprise.
+
+THREE THINGS THE SCHEMA FORCED, each handled rather than papered over:
+
+1. `teaching_assignment` is `unique (class_id, subject_id, academic_year_id)` — one teacher per
+   class-subject-year. So a requested pair may already belong to another teacher. The account is
+   therefore committed FIRST, on its own, and the assignments attempted afterwards; a clash is
+   SKIPPED and counted, never fatal. Losing a freshly created account whose temporary password has
+   already been shown to the admin, because one class's maths was taken, would be a far worse
+   outcome than reporting which pairs did not stick. Verified: a second teacher requesting an
+   already-taken pair gets 201 with `created: 0, skipped: 1`.
+2. `academic_year_id` is not nullable, so the year is required whenever there is anything to
+   assign, and guessing it would silently file a timetable under the wrong year.
+3. Subjects without classes (or the reverse) describes no assignment at all. Both the schema
+   validator and the form refuse it, rather than accepting a submission that would quietly create
+   nothing — verified at the API too, not only in the UI (422).
+
+Verified by driving the screen, 19 assertions to 0 failures: no EMIS field and no mention of EMIS
+anywhere in the rendered text; two fieldsets with 26 chips; the whole-grade toggle turns on exactly
+its own grade's classes; the count line reads "2" for two subjects across one class; submit stays
+disabled with subjects but no classes and enables when both are chosen; the credentials panel
+reports the assignments created; the rows in the database carry a class, a subject and the year and
+name only the two chosen subjects; the new teacher can sign in and their gradebook is correctly
+gated behind `AUTH_PASSWORD_CHANGE_REQUIRED` until the temporary password is changed; and there is
+no horizontal overflow at 1440px or 390px. The run deleted the account and asserted teachers and
+assignments returned to 20 and 79 — the cascade on `teacher_id` removes the assignments with it.
+
+**D-191. Two escaping traps hit again while writing the tests for this, both mine.** A regex
+written as `\b2\b` inside a shell heredoc reached Python as `2`, where `` is a
+backspace, so the file ended up containing a literal 0x08 byte and the assertion could never
+match. Found with `cat -A`, not by reading the source, because the character is invisible.
+Replaced with `String.includes(" 2 ")` — no regex, nothing to mangle. And a single Armenian letter
+in one of my own comments failed `i18n:check`, which scans `src/app` and `src/components` for
+hardcoded copy; this is the second time. The lesson for both: do not put backslash escapes or
+non-Latin text into code generated through a shell heredoc.

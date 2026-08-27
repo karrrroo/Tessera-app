@@ -77,14 +77,21 @@ export type CreatedStudent = {
   login: string;
   temporaryPassword: string;
 };
-// Creating one teacher account. No classId and no birthDate, unlike
-// CreatedStudent: a teacher's classes are teaching assignments made afterwards
-// on /admin/assignments, and the schema has no column for a teacher's date of
-// birth. `temporaryPassword` is shown once and never recoverable.
+// Creating one teacher account, with what they teach.
+//
+// No EMIS id: Tessera replaces that system, so its identifier is not something
+// this product asks an admin to type. No birthDate either — the schema has no
+// column for a teacher's. `temporaryPassword` is shown once and is never
+// recoverable afterwards.
+//
+// `assignments.skipped` is not an error. teaching_assignment is unique on
+// (class, subject, year), so a requested pair whose class already has a
+// teacher for that subject is reported rather than failing the account.
 export type CreatedTeacher = {
-  teacher: { id: string; firstName: string; lastName: string; emisTeacherId: string | null };
+  teacher: { id: string; firstName: string; lastName: string };
   login: string;
   temporaryPassword: string;
+  assignments: { created: number; skipped: { classId: string; subjectId: string }[] };
 };
 
 export type Assignment = {
@@ -242,7 +249,9 @@ export const adminApi = {
     lastName: string;
     patronymic?: string;
     email: string;
-    emisTeacherId?: string;
+    subjectIds?: string[];
+    classIds?: string[];
+    academicYearId?: string;
   }) => apiJson<CreatedTeacher>("/api/admin/teachers", { method: "POST", body: JSON.stringify(data) }),
   transitionEnrollment: (
     id: string,
