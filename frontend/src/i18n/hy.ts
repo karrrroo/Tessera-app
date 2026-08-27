@@ -37,7 +37,8 @@ const dict = {
     "gradebook": "Գնահատամատյան",
     "analytics": "Դասարանի վերլուծություն",
     "queue": "Հավաստագրերի հայտեր",
-    "settings": "Կարգավորումներ"
+    "settings": "Կարգավորումներ",
+    "admin": "Ադմինիստրացիա"
   },
   "common": {
     "roleStudent": "Աշակերտ",
@@ -90,6 +91,7 @@ const dict = {
     "saveEnter": "Պահպանել և մտնել",
     "firstTitle": "Սահմանեք ձեր գաղտնաբառը",
     "firstBody": "Ուսումնական հաստատության տված ժամանակավոր գաղտնաբառը պետք է փոխվի առաջին մուտքի ժամանակ։",
+    "firstCredSource": "Մուտքի տվյալները տրամադրում է դպրոցի ադմինիստրացիան.",
     "saveGo": "Պահպանել և շարունակել",
     "signOut": "Ելք"
   },
@@ -432,6 +434,23 @@ const dict = {
       "body": "Ավելի արագ մուտք և QR քարտ առանց ինտերնետի",
       "add": "Ավելացնել"
     }
+  },
+  "admin": {
+    "title": "Ադմինիստրացիա",
+    "sub": "Հաջորդ քայլերը՝ հերթականությամբ։",
+    "institution": "Հաստատություն",
+    "years": "Ուսումնական տարի և կիսամյակներ",
+    "subjects": "Առարկաներ",
+    "classes": "Դասարաններ",
+    "roster": "Աշակերտների ցուցակ",
+    "assignments": "Ուսուցիչների նշանակումներ",
+    "scanAnomalies": "Սկանավորման անոմալիաներ",
+    "notSet": "Նշված չէ",
+    "yearsCount": { "one": "{count} տարի", "few": "{count} տարի", "many": "{count} տարի", "other": "{count} տարի" },
+    "subjectsCount": { "one": "{count} առարկա", "few": "{count} առարկա", "many": "{count} առարկա", "other": "{count} առարկա" },
+    "classesCount": { "one": "{count} դասարան", "few": "{count} դասարան", "many": "{count} դասարան", "other": "{count} դասարան" },
+    "studentsCount": { "one": "{count} աշակերտ", "few": "{count} աշակերտ", "many": "{count} աշակերտ", "other": "{count} աշակերտ" },
+    "assignmentsCount": { "one": "{count} նշանակում", "few": "{count} նշանակում", "many": "{count} նշանակում", "other": "{count} նշանակում" }
   }
 } as const;
 

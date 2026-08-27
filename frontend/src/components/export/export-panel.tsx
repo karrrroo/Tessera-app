@@ -6,6 +6,21 @@ import { useLocale, useT } from "@/i18n/locale-provider";
 import { gradebookApi, type TeacherClass } from "@/lib/api/gradebook";
 import { adminApi, type AcademicYear, type SchoolClass, type Subject, type Term } from "@/lib/api/admin";
 import { downloadExport, type ExportFormat, type ExportScope } from "@/lib/api/export";
+import { useAsyncData } from "@/lib/use-async-data";
+
+function InlineLoadError({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
+  return (
+    <div className="flex flex-col items-center gap-2 py-4 text-center">
+      <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+        {t.scr.err.body}
+      </p>
+      <button type="button" onClick={onRetry} className="text-xs underline" style={{ color: "var(--ink-2)" }}>
+        {t.scr.err.retry}
+      </button>
+    </div>
+  );
+}
 
 function subjectName(s: Subject, locale: "hy" | "en" | "ru"): string {
   return locale === "hy" ? s.nameHy : locale === "ru" ? s.nameRu : s.nameEn;
@@ -14,19 +29,22 @@ function subjectName(s: Subject, locale: "hy" | "en" | "ru"): string {
 function TeacherExportForm() {
   const t = useT();
   const { locale } = useLocale();
-  const [classes, setClasses] = useState<TeacherClass[] | null>(null);
+  const { data: classes, error: classesError, retry: retryClasses } = useAsyncData<TeacherClass[]>(
+    () => gradebookApi.getClasses(),
+    [],
+  );
   const [selected, setSelected] = useState("");
   const [format, setFormat] = useState<ExportFormat>("xlsx");
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    gradebookApi.getClasses().then((rows) => {
-      setClasses(rows);
-      if (rows[0]) setSelected(`${rows[0].classId}:${rows[0].subjectId}:${rows[0].termId}`);
-    });
-  }, []);
+    if (classes && classes[0] && !selected) {
+      setSelected(`${classes[0].classId}:${classes[0].subjectId}:${classes[0].termId}`);
+    }
+  }, [classes, selected]);
 
+  if (classesError) return <InlineLoadError onRetry={retryClasses} />;
   if (!classes) return null;
 
   async function run() {
@@ -72,13 +90,25 @@ function TeacherExportForm() {
 function AdminExportForm() {
   const t = useT();
   const { locale } = useLocale();
-  const [years, setYears] = useState<AcademicYear[] | null>(null);
+  const { data: years, error: yearsError, retry: retryYears } = useAsyncData<AcademicYear[]>(
+    () => adminApi.listAcademicYears(),
+    [],
+  );
   const [yearId, setYearId] = useState("");
-  const [terms, setTerms] = useState<Term[]>([]);
+  const { data: terms, error: termsError, retry: retryTerms } = useAsyncData<Term[]>(
+    () => (yearId ? adminApi.listTerms(yearId) : Promise.resolve([])),
+    [yearId],
+  );
   const [termId, setTermId] = useState("");
-  const [classesList, setClassesList] = useState<SchoolClass[]>([]);
+  const { data: classesList, error: classesError, retry: retryClasses } = useAsyncData<SchoolClass[]>(
+    () => (yearId ? adminApi.listClasses(yearId) : Promise.resolve([])),
+    [yearId],
+  );
   const [classId, setClassId] = useState("");
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const { data: subjects, error: subjectsError, retry: retrySubjects } = useAsyncData<Subject[]>(
+    () => adminApi.listSubjects(),
+    [],
+  );
   const [subjectId, setSubjectId] = useState("");
   const [scope, setScope] = useState<ExportScope>("class-subject-term");
   const [format, setFormat] = useState<ExportFormat>("xlsx");
@@ -86,28 +116,19 @@ function AdminExportForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    adminApi.listAcademicYears().then((rows) => {
-      setYears(rows);
-      if (rows[0]) setYearId(rows[0].id);
-    });
-    adminApi.listSubjects().then((rows) => {
-      setSubjects(rows);
-      if (rows[0]) setSubjectId(rows[0].id);
-    });
-  }, []);
-
+    if (years && years[0] && !yearId) setYearId(years[0].id);
+  }, [years, yearId]);
   useEffect(() => {
-    if (!yearId) return;
-    adminApi.listTerms(yearId).then((rows) => {
-      setTerms(rows);
-      if (rows[0]) setTermId(rows[0].id);
-    });
-    adminApi.listClasses(yearId).then((rows) => {
-      setClassesList(rows);
-      if (rows[0]) setClassId(rows[0].id);
-    });
-  }, [yearId]);
+    if (terms && terms[0] && !termId) setTermId(terms[0].id);
+  }, [terms, termId]);
+  useEffect(() => {
+    if (classesList && classesList[0] && !classId) setClassId(classesList[0].id);
+  }, [classesList, classId]);
+  useEffect(() => {
+    if (subjects && subjects[0] && !subjectId) setSubjectId(subjects[0].id);
+  }, [subjects, subjectId]);
 
+  if (yearsError) return <InlineLoadError onRetry={retryYears} />;
   if (!years) return null;
 
   async function run() {
@@ -155,12 +176,13 @@ function AdminExportForm() {
           {t.exp.term}
         </span>
         <select value={termId} onChange={(e) => setTermId(e.target.value)} className="rounded-2xl border px-3 py-2 text-sm" style={{ borderColor: "var(--hair)", background: "var(--surface2)", color: "var(--ink)" }}>
-          {terms.map((term) => (
+          {(terms ?? []).map((term) => (
             <option key={term.id} value={term.id}>
               {term.label}
             </option>
           ))}
         </select>
+        {termsError && <InlineLoadError onRetry={retryTerms} />}
       </label>
 
       {scope !== "institution-term" && (
@@ -169,12 +191,13 @@ function AdminExportForm() {
             {t.exp.cls}
           </span>
           <select value={classId} onChange={(e) => setClassId(e.target.value)} className="rounded-2xl border px-3 py-2 text-sm" style={{ borderColor: "var(--hair)", background: "var(--surface2)", color: "var(--ink)" }}>
-            {classesList.map((c) => (
+            {(classesList ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.grade}-{c.letter}
               </option>
             ))}
           </select>
+          {classesError && <InlineLoadError onRetry={retryClasses} />}
         </label>
       )}
 
@@ -184,12 +207,13 @@ function AdminExportForm() {
             {t.exp.subj}
           </span>
           <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="rounded-2xl border px-3 py-2 text-sm" style={{ borderColor: "var(--hair)", background: "var(--surface2)", color: "var(--ink)" }}>
-            {subjects.map((s) => (
+            {(subjects ?? []).map((s) => (
               <option key={s.id} value={s.id}>
                 {subjectName(s, locale)}
               </option>
             ))}
           </select>
+          {subjectsError && <InlineLoadError onRetry={retrySubjects} />}
         </label>
       )}
 

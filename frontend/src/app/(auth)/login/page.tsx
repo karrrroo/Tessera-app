@@ -173,7 +173,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative hidden h-full desktop:grid" style={{ gridTemplateColumns: "1fr 1fr", placeItems: "center", zIndex: 10 }}>
-        <div className="flex flex-col items-center gap-4 px-10 text-center" style={cardStyle}>
+        <div className="flex flex-col items-center gap-5 px-10 text-center" style={cardStyle}>
           {/* Lockup, not the bare Mark — the wide login column is one of
               the two contexts (with the splash) that shows the full
               wordmark, per Tessera.dc.html's own 200px lockbox and the

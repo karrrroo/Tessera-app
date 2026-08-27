@@ -28,7 +28,8 @@ const dict = {
     "gradebook": "Gradebook",
     "analytics": "Class analytics",
     "queue": "Credential requests",
-    "settings": "Settings"
+    "settings": "Settings",
+    "admin": "Administration"
   },
   "common": {
     "roleStudent": "Student",
@@ -81,6 +82,7 @@ const dict = {
     "saveEnter": "Save and sign in",
     "firstTitle": "Set your password",
     "firstBody": "The temporary password issued by your institution must be changed at first sign-in.",
+    "firstCredSource": "Your credentials come from the school administration.",
     "saveGo": "Save and continue",
     "signOut": "Sign out"
   },
@@ -423,6 +425,23 @@ const dict = {
       "body": "Faster access and your QR card without internet",
       "add": "Add"
     }
+  },
+  "admin": {
+    "title": "Administration",
+    "sub": "What to do next, in order.",
+    "institution": "Institution",
+    "years": "Academic year and terms",
+    "subjects": "Subjects",
+    "classes": "Classes",
+    "roster": "Student roster",
+    "assignments": "Teacher assignments",
+    "scanAnomalies": "Scan anomalies",
+    "notSet": "Not set",
+    "yearsCount": { "one": "{count} year", "few": "{count} years", "many": "{count} years", "other": "{count} years" },
+    "subjectsCount": { "one": "{count} subject", "few": "{count} subjects", "many": "{count} subjects", "other": "{count} subjects" },
+    "classesCount": { "one": "{count} class", "few": "{count} classes", "many": "{count} classes", "other": "{count} classes" },
+    "studentsCount": { "one": "{count} student", "few": "{count} students", "many": "{count} students", "other": "{count} students" },
+    "assignmentsCount": { "one": "{count} assignment", "few": "{count} assignments", "many": "{count} assignments", "other": "{count} assignments" }
   }
 } as const;
 

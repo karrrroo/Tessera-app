@@ -1477,3 +1477,57 @@ found the original three (`forgot/page.tsx`'s email input) — same suppression 
 global `:focus-visible` fix as before. Verified visually: the login card's sub-line
 reads clearly against the mesh in dark theme, where it was previously unreadable.
 
+## 2026-08-27 (cont'd) — "Eight items" round: A1/B1/B3, plus two agent-found fixes
+
+**D-121. A real bug: the admin section's own overview/checklist page and the sidebar's
+"Admin" nav label were hardcoded English regardless of locale.** Added a real `admin`
+dictionary section (title/sub/institution/years/subjects/classes/roster/assignments/
+scanAnomalies/notSet) and per-noun plural forms via a new `i18n/plural.ts`
+(`Intl.PluralRules`-driven; every locale's dictionary carries all four CLDR categories —
+`one`/`few`/`many`/`other` — even though hy/en only ever produce `one`/`other`, so
+`PluralForms` has one shape every locale's dictionary shares). `nav.admin` similarly added
+and `nav-items.ts`'s English-only `STATIC_LABELS` fallback removed. Also fixed the
+checklist's own multi-call fetch chain having no `.catch()` at all (the same repeated
+pattern from D-110) via the same `useAsyncData` hook. A broader sweep of the rest of
+`frontend/src/app` for the same class of bug found ~30 more instances, almost entirely in
+admin screens the "don't start the admin section" hold already covers — reported as a
+table, not fixed, pending the user's own prioritization.
+
+**D-122. A real, precisely-diagnosed bug: `Lockup`'s outer wrapper had an explicit
+height computed from the *scaled* visual result, which doesn't match where
+`transform-origin: left bottom` actually anchors — the inner row's true *unscaled*
+layout height, which is taller.** The visual content spilled past the wrapper's declared
+bottom edge into the tagline below it. Fixed by not setting an explicit height at all,
+letting the wrapper hug the row's real unscaled height so the anchor and the box edge
+always coincide (`transform: scale()` never shrinks an element's own layout box, only
+how it paints — the bug was assuming otherwise). Login's column gap raised to 20px
+(`gap-5`) per spec.
+
+**D-123. Removed the "Առաջին մուտք" (first-login) demo button.** `DemoRow` now filters
+`!a.mustChangePassword` before rendering, rather than special-casing that role in the
+label function. The underlying account/flow are untouched — the button is gone, not the
+feature. Added `auth.firstCredSource` (all three locales) to `first-login/page.tsx`,
+stating credentials come from the school administration. **Found immediately after,
+verifying this: `nor@demo.tessera.am`'s `must_change_password` had independently flipped
+to `false`** (timestamp and a burst of device-session activity both point to a background
+audit agent completing the real password-change form while testing that screen, not
+anything done directly) — meaning the demo row's filter can no longer distinguish it from
+`ani@` by that flag, and both now render as an identical, unlabeled-by-name "student"
+button (the label is a fixed per-role string, not the account's real name, so the
+duplicate reads as literally the same text twice). Not reset; reported to the user, who
+has since acknowledged it and asked to test the real end-to-end flow against a valid
+must-change-password account instead.
+
+**D-124 (found by a dispatched audit agent, not this pass directly). `export-log-table.tsx`
+and both forms in `export-panel.tsx` had the same missing-`.catch()` pattern** on their
+own mount-time fetches — converted to `useAsyncData` with inline retry, matching every
+other instance of this fix this session.
+
+**D-125 (found by a dispatched audit agent). `forgot/page.tsx`'s submit and
+`forgot/sent/page.tsx`'s resend both had the same missing-`.catch()` pattern**, confirmed
+live as an actual uncaught `TypeError: Failed to fetch` on a network failure; `forgot/
+page.tsx` also let any non-2xx status other than 429 fall through to the "email sent"
+screen. Both fixed with a real catch + `t.auth.errGeneric`. Separately, `forgot/sent`'s
+dev-only reset-link anchor rendered the raw token as one unbroken string, forcing
+horizontal scroll at 390px — fixed with `break-all`.
+

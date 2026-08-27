@@ -28,7 +28,8 @@ const dict = {
     "gradebook": "Журнал",
     "analytics": "Аналитика класса",
     "queue": "Заявки",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "admin": "Администрирование"
   },
   "common": {
     "roleStudent": "Ученик",
@@ -81,6 +82,7 @@ const dict = {
     "saveEnter": "Сохранить и войти",
     "firstTitle": "Задайте пароль",
     "firstBody": "Временный пароль, выданный заведением, нужно сменить при первом входе.",
+    "firstCredSource": "Учётные данные предоставляет администрация школы.",
     "saveGo": "Сохранить и продолжить",
     "signOut": "Выйти"
   },
@@ -423,6 +425,23 @@ const dict = {
       "body": "Быстрый вход и QR-карта без интернета",
       "add": "Добавить"
     }
+  },
+  "admin": {
+    "title": "Администрирование",
+    "sub": "Следующие шаги — по порядку.",
+    "institution": "Учебное заведение",
+    "years": "Учебный год и семестры",
+    "subjects": "Предметы",
+    "classes": "Классы",
+    "roster": "Список учеников",
+    "assignments": "Назначения учителей",
+    "scanAnomalies": "Аномалии сканирования",
+    "notSet": "Не указано",
+    "yearsCount": { "one": "{count} год", "few": "{count} года", "many": "{count} лет", "other": "{count} года" },
+    "subjectsCount": { "one": "{count} предмет", "few": "{count} предмета", "many": "{count} предметов", "other": "{count} предмета" },
+    "classesCount": { "one": "{count} класс", "few": "{count} класса", "many": "{count} классов", "other": "{count} класса" },
+    "studentsCount": { "one": "{count} ученик", "few": "{count} ученика", "many": "{count} учеников", "other": "{count} ученика" },
+    "assignmentsCount": { "one": "{count} назначение", "few": "{count} назначения", "many": "{count} назначений", "other": "{count} назначения" }
   }
 } as const;
 

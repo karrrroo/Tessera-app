@@ -77,6 +77,11 @@ export default function FirstLoginPage() {
           <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
             {t.auth.firstBody}
           </p>
+          {/* --ink-2, not --ink-3 — same glass-over-mesh contrast issue as
+              the line above. */}
+          <p className="mt-2 text-xs" style={{ color: "var(--ink-2)" }}>
+            {t.auth.firstCredSource}
+          </p>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <PasswordField label={t.set.pwCur} value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" />

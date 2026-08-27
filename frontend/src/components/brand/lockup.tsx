@@ -20,7 +20,6 @@ import { GLYPH_PATH, SPARK_PATH } from "./mark";
 // on the whole row — reproduced here as `size / AUTHORED_WIDTH` so the
 // baseline/tuck/gap relationships never have to be recomputed by hand.
 const AUTHORED_WIDTH = 250;
-const AUTHORED_HEIGHT = 52;
 
 export type LockupProps = {
   size?: number;
@@ -36,12 +35,23 @@ export type LockupProps = {
 
 export function Lockup({ size = 200, animate = false, className, style }: LockupProps) {
   const scale = size / AUTHORED_WIDTH;
-  const height = AUTHORED_HEIGHT * scale;
 
   return (
+    // No explicit height — a real bug, found live: `transform: scale()`
+    // never shrinks the element's own LAYOUT box, only how it paints, so a
+    // manually-computed "post-scale" height here doesn't match where the
+    // inner row's own `transform-origin: left bottom` actually anchors
+    // (that anchor is the row's true, unscaled natural height, which is
+    // taller than any post-scale figure). Anything shorter than that here
+    // just let the visual content spill past this wrapper's own bottom
+    // edge — straight into a sibling positioned right after it, which is
+    // exactly what "the tagline overlaps the lockup" was. Leaving height
+    // unset makes this wrapper hug the row's real (unscaled) height
+    // exactly, so the anchor point and this box's bottom edge always
+    // coincide — "reserve its full height," literally.
     <span
       className={className}
-      style={{ display: "block", width: size, height, color: "inherit", lineHeight: 0, ...style }}
+      style={{ display: "block", width: size, color: "inherit", lineHeight: 0, ...style }}
     >
       <span
         data-lock="1"

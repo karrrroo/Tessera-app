@@ -27,6 +27,7 @@ function ForgotSentContent() {
   const email = useSearchParams().get("email") ?? "";
   const [secondsLeft, setSecondsLeft] = useState(COOLDOWN_SECONDS);
   const [devLink, setDevLink] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000);
@@ -43,8 +44,17 @@ function ForgotSentContent() {
 
   async function resend() {
     if (secondsLeft > 0 || !email) return;
-    await apiFetch("/api/auth/password/forgot", { method: "POST", body: JSON.stringify({ email }) });
-    setSecondsLeft(COOLDOWN_SECONDS);
+    setError(null);
+    try {
+      await apiFetch("/api/auth/password/forgot", { method: "POST", body: JSON.stringify({ email }) });
+      setSecondsLeft(COOLDOWN_SECONDS);
+    } catch {
+      // onClick={resend} runs detached from React, same as forgot/page.tsx's
+      // submit() — an uncaught rejection here (offline, DNS, etc.) would
+      // otherwise surface only as an unhandled promise rejection, and the
+      // cooldown is deliberately left untouched so the button stays usable.
+      setError(t.auth.errGeneric);
+    }
   }
 
   return (
@@ -68,13 +78,16 @@ function ForgotSentContent() {
         >
           {secondsLeft > 0 ? interpolate(t.auth.resendWait, { seconds: secondsLeft }) : t.auth.resendButton}
         </button>
+        {error && <p className="text-sm text-danger">{error}</p>}
 
         {devLink && (
           <p className="text-xs" style={{ color: "var(--ink-2)" }}>
             {/* Dev-only convenience (NODE_ENV !== "production"), never shown to
-                real users — deliberately not localized. */}
+                real users — deliberately not localized. break-all: the token
+                is one long unbroken string that otherwise overflows the card
+                and forces horizontal scroll on narrow viewports. */}
             Dev: reset link{" "}
-            <Link href={devLink} className="underline">
+            <Link href={devLink} className="break-all underline">
               {devLink}
             </Link>
           </p>

@@ -23,10 +23,17 @@ export function DemoRow({ onError }: { onError: (message: string) => void }) {
       .catch(() => setAccounts([]));
   }, []);
 
-  if (!accounts?.length) return null;
+  // The real first-login flow is: sign in with the account's own real
+  // credentials, and the must-change-password gate takes it from there —
+  // a one-click demo shortcut into it teaches the wrong thing (that this
+  // screen is its own destination to jump to, not a consequence of a real
+  // login). The underlying account and flow are untouched; only this
+  // button is gone. Three demo buttons remain: student, teacher, admin.
+  const clickable = accounts?.filter((a) => !a.mustChangePassword) ?? null;
+
+  if (!clickable?.length) return null;
 
   const labelFor = (a: DemoAccount) => {
-    if (a.mustChangePassword) return t.auth.demoF;
     if (a.role === "student") return t.auth.demoS;
     if (a.role === "teacher") return t.auth.demoT;
     return t.auth.demoA;
@@ -49,7 +56,7 @@ export function DemoRow({ onError }: { onError: (message: string) => void }) {
         {t.auth.demoLabel}
       </p>
       <div className="flex flex-wrap gap-2">
-        {accounts.map((a) => (
+        {clickable.map((a) => (
           <button
             key={a.email}
             disabled={busy}

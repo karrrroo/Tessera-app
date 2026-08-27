@@ -1,19 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useT } from "@/i18n/locale-provider";
-import { exportApi, type ExportLogRow } from "@/lib/api/export";
+import { exportApi } from "@/lib/api/export";
+import { useAsyncData } from "@/lib/use-async-data";
 
 // EXP-5: who, what scope, when, how many marks — "when someone asks
 // whether a term was submitted, this answers it." A dense table (C13),
 // admin-only.
 export function ExportLogTable() {
   const t = useT();
-  const [rows, setRows] = useState<ExportLogRow[] | null>(null);
+  const { data: rows, error, retry } = useAsyncData(() => exportApi.getLogs(50), []);
 
-  useEffect(() => {
-    exportApi.getLogs(50).then(setRows);
-  }, []);
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold tracking-wide" style={{ color: "var(--ink-3)" }}>
+          {t.exp.logTitle}
+        </h3>
+        <div className="flex flex-col items-center gap-2 py-4 text-center">
+          <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+            {t.scr.err.body}
+          </p>
+          <button type="button" onClick={retry} className="text-xs underline" style={{ color: "var(--ink-2)" }}>
+            {t.scr.err.retry}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!rows) return null;
 

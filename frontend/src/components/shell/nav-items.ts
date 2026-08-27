@@ -13,11 +13,12 @@ function routeFor(id: NavItemId): string {
   return ROUTE_FOR[id] ?? `/${id}`;
 }
 
-// "admin" has no T.nav key and no ICON entry at all — the design package
+// "admin" had no T.nav key and no ICON entry at all — the design package
 // has no admin screens (roadmap Phase 5: "None of these exist in the design
-// package"), so this is plain, undecorated English rather than a fabricated
-// translation.
-const STATIC_LABELS: Partial<Record<NavItemId, string>> = { admin: "Admin" };
+// package") — so this rendered as plain, undecorated English regardless of
+// locale. A real bug (found during a broader HY-mode sweep of the admin
+// section): `nav.admin` now has a real translation in all three locales.
+const STATIC_LABELS: Partial<Record<NavItemId, string>> = {};
 
 // roadmap Phase 4: "Nav items from T.nav and ICON... filtered by role."
 // Sidebar (web) shows every role-appropriate item; the mobile pill (brief

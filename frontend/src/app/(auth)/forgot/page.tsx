@@ -25,7 +25,19 @@ export default function ForgotPasswordPage() {
         setError(t.auth.errRateLimited);
         return;
       }
+      // Any other non-2xx (e.g. 422 on a malformed email that slipped past
+      // the input's own type="email" check) is a real failure, not a
+      // reason to show the "email sent" screen.
+      if (!res.ok) {
+        setError(t.auth.errGeneric);
+        return;
+      }
       router.push(`/forgot/sent?email=${encodeURIComponent(email)}`);
+    } catch {
+      // apiFetch's own fetch() rejecting (offline, DNS, etc.) — this handler
+      // runs detached from React as a bare async onSubmit, so an uncaught
+      // rejection here would surface only as an unhandled promise rejection.
+      setError(t.auth.errGeneric);
     } finally {
       setBusy(false);
     }
