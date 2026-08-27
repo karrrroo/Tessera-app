@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApi, type AdminApplication } from "@/lib/api/admin";
+import { ApiRequestError } from "@/lib/api/client";
 import { useT } from "@/i18n/locale-provider";
 import { useAsyncData } from "@/lib/use-async-data";
 import { ScreenError } from "@/components/record/screen-error";
@@ -40,8 +41,30 @@ export default function AdminApplicationsPage() {
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  const { data, error, retry } = useAsyncData<AdminApplication[]>(() => adminApi.listApplications(tab), [tab]);
+  const { data, error, errorValue, retry } = useAsyncData<AdminApplication[]>(() => adminApi.listApplications(tab), [tab]);
 
+  // Schema changes on this project are applied by hand (C2), so there is a
+  // real window where this screen is deployed and its table is not there yet.
+  // The backend reports that as 503 APPLICATIONS_NOT_PROVISIONED rather than a
+  // generic failure, and it gets a plain sentence instead of a retry button —
+  // retrying cannot help, and an opaque error on a screen the dashboard links
+  // to reads as a broken app rather than an unfinished deployment.
+  const notProvisioned = errorValue instanceof ApiRequestError && errorValue.code === "APPLICATIONS_NOT_PROVISIONED";
+  if (notProvisioned) {
+    return (
+      <main className="mx-auto w-full max-w-4xl space-y-5 p-8">
+        <h1 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+          {t.admin.apps.title}
+        </h1>
+        <p
+          className="rounded-2xl border p-4 text-sm leading-relaxed"
+          style={{ borderColor: "var(--hair)", background: "var(--bg-base)", color: "var(--ink-2)" }}
+        >
+          {t.admin.apps.notProvisioned}
+        </p>
+      </main>
+    );
+  }
   if (error) return <ScreenError onRetry={retry} />;
 
   const rows = data ?? [];

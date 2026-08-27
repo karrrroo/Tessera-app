@@ -59,7 +59,20 @@ export default function NewStudentPage() {
   useEffect(() => {
     if (!year) return;
     let cancelled = false;
-    adminApi.listClasses(year.id).then((c) => !cancelled && setClasses(c));
+    // A failure resolves to an empty list rather than leaving `classes`
+    // null: null is this screen's loading state, so an unhandled rejection
+    // left the class picker spinning forever with no way to submit and no
+    // indication why. An empty list renders the picker's own "no classes"
+    // state, which is at least true — the screen cannot offer a class it
+    // could not load — and `complete` already blocks submit without one.
+    adminApi.listClasses(year.id).then(
+      (c) => {
+        if (!cancelled) setClasses(c);
+      },
+      () => {
+        if (!cancelled) setClasses([]);
+      },
+    );
     return () => {
       cancelled = true;
     };

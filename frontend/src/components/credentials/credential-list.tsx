@@ -5,6 +5,7 @@ import { useT } from "@/i18n/locale-provider";
 import { credentialsApi, type CredentialItem } from "@/lib/api/credentials";
 import { CredentialCard } from "./credential-card";
 import { SubmitSheet } from "./submit-sheet";
+import { ScreenError } from "@/components/record/screen-error";
 
 export function CredentialList() {
   const t = useT();
@@ -16,16 +17,32 @@ export function CredentialList() {
   // sequence counter makes only the most recently *issued* call allowed to
   // ever call setItems, regardless of resolution order.
   const requestSeq = useRef(0);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   function reload() {
     const seq = ++requestSeq.current;
-    credentialsApi.list().then((r) => {
-      if (seq === requestSeq.current) setItems(r.items);
-    });
+    // The rejection handler was missing, so a failed load left this list on
+    // its loading state (`items === null` renders nothing) with an unhandled
+    // rejection behind it. Mirrors review-queue.tsx, which already had one.
+    //
+    // `loadFailed` is cleared in the SUCCESS branch rather than synchronously
+    // here: `reload` is the effect body below, so a synchronous setState in it
+    // is the set-state-in-effect the linter rightly objects to.
+    credentialsApi.list().then(
+      (r) => {
+        if (seq !== requestSeq.current) return;
+        setItems(r.items);
+        setLoadFailed(false);
+      },
+      () => {
+        if (seq === requestSeq.current) setLoadFailed(true);
+      },
+    );
   }
 
   useEffect(reload, []);
 
+  if (loadFailed) return <ScreenError onRetry={reload} />;
   if (!items) return null;
 
   return (

@@ -12,20 +12,33 @@ import { useCallback, useEffect, useState } from "react";
 // (bumping `seq`, which the effect depends on) gives failed screens the
 // working "Try again" (`t.scr.err`) that already existed in every locale
 // file but was never wired to anything.
+// `errorValue` carries the rejection itself alongside the boolean, added
+// because discarding it forced any screen that needs to tell one failure from
+// another to bypass this hook entirely and reimplement the catch it exists to
+// provide. The admissions queue is the first such screen: a 503
+// APPLICATIONS_NOT_PROVISIONED (its table has not been created yet, which no
+// amount of retrying fixes) has to read differently from a transient failure
+// that a "Try again" button can actually resolve. The boolean stays, so every
+// existing call site is untouched.
 export function useAsyncData<T>(fetcher: () => Promise<T>, deps: readonly unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState(false);
+  const [errorValue, setErrorValue] = useState<unknown>(null);
   const [seq, setSeq] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setError(false);
+    setErrorValue(null);
     fetcher().then(
       (result) => {
         if (!cancelled) setData(result);
       },
-      () => {
-        if (!cancelled) setError(true);
+      (err) => {
+        if (!cancelled) {
+          setErrorValue(err);
+          setError(true);
+        }
       },
     );
     return () => {
@@ -38,5 +51,5 @@ export function useAsyncData<T>(fetcher: () => Promise<T>, deps: readonly unknow
   }, [...deps, seq]);
 
   const retry = useCallback(() => setSeq((s) => s + 1), []);
-  return { data, error, retry };
+  return { data, error, errorValue, retry };
 }

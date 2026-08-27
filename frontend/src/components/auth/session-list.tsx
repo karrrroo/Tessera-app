@@ -17,9 +17,18 @@ export function SessionList() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchSessions().then((rows) => {
-      if (!cancelled) setSessions(rows);
-    });
+    // Without a rejection handler this left Settings' session list on its
+    // loading state permanently, with an unhandled rejection behind it. An
+    // empty list is the honest fallback: the screen cannot show sessions it
+    // could not fetch, and the list already has an empty state.
+    fetchSessions().then(
+      (rows) => {
+        if (!cancelled) setSessions(rows);
+      },
+      () => {
+        if (!cancelled) setSessions([]);
+      },
+    );
     return () => {
       cancelled = true;
     };

@@ -2195,3 +2195,116 @@ the textarea's own outline suppressed to avoid a second inner ring. Measured on 
 build in both themes — unfocused: `border-top-width: 0px`, background `rgba(0, 0, 0, 0)`,
 `box-shadow: none`; focused: a 2px ring (`rgb(241, 239, 233)` dark, `rgb(16, 17, 18)` light) over
 `rgb(20, 24, 34)` / `rgb(242, 242, 244)`. Frame gone, focus visible, both themes.
+
+**D-175. A full end-to-end pass over the application found eleven real defects. This entry
+records what they were; the ones below it record the notable ones individually.** Coverage:
+120 authenticated page loads (21 routes x 3 roles x 2 viewports, with locale and theme varied
+across the matrix), 18 public/auth screen loads at two widths, 33 API endpoints x 4 callers,
+28 interaction assertions, and a static scan of every promise chain in `frontend/src`. The
+route sweep started at **38 problems and finished at 2**, and both survivors are the *intended*
+503 for a table that has not been created yet — the browser logs the failed fetch, while the
+screen itself shows a localised explanation. Every internal link target discovered by crawling
+the app (checked as admin) resolves: **broken: none**.
+
+**D-176. Seven unhandled promise rejections, one of which was a reproducible white screen.**
+`lib/use-async-data.ts` was written earlier this project to fix exactly this pattern —
+`fetcher().then(setState)` with no rejection handler, leaving the promise unhandled and the
+screen permanently blank — and its own comment lists the five screens it was applied to. Seven
+more were never converted and still had it. Found by parsing every `.then(` in `frontend/src`
+and checking each for a second argument, a `.catch`, or an enclosing `await`/try.
+
+The worst was `/gradebook`: a student or admin opening it got a 403, an uncaught `FORBIDDEN`
+page error, and a **completely blank page** — 0 characters of text, reproducible on every run at
+both viewports. The others were latent rather than reproducible, but the same shape:
+`admin/institution` (blank on a failed load), `admin/students/new` (class picker spinning
+forever), `use-current-academic-year` (resolved to a permanent `undefined`, so *every* admin
+screen that waits on a year hung), `session-list` and `credential-list` (permanent loading
+state), and `review-queue`'s subject-filter fetch (unhandled, though the screen still worked).
+
+Each now resolves to something a person can act on: an error state with a working retry where
+retrying can help, an empty list where it cannot. `use-current-academic-year` resolves to `null`
+on failure, and its comment was updated — `null` now means "no year available", which is true
+whether none exist or the load failed, and every consumer already renders something actionable
+for it.
+
+Four more sites the scan flagged are false positives, checked individually and left alone:
+`archive/page.tsx` (inside `useAsyncData`, which catches), `people-search.tsx` x2 (a
+`req.catch` two lines below), and `iter-provider.tsx` (`loadMessages` has an internal try/catch
+and cannot reject). A fifth was my own scanner matching the characters `.then()` inside a
+comment I had just written.
+
+**D-177. Role-gated routes rendered for the wrong role, and now return not-found.**
+`(app)/admin/layout.tsx` already guarded the admin subtree, citing roadmap Phase 5 — "A student
+hitting /admin sees the not-found screen, not a redirect that reveals the route exists" — but
+nothing extended that to the role-specific routes outside `/admin`. Measured: a student typing
+`/queue` got the credential-review screen's chrome (208 characters of it), and a teacher or
+admin typing `/overview` got "Could not load" with a **Try again button that could never
+succeed**, because the API was correctly refusing them a student's record.
+
+No data ever leaked — every one of those endpoints answers 403, verified again in this pass —
+but the screens were wrong, and a retry button that cannot work is worse than an honest
+not-found. `lib/route-access.ts` now holds one longest-prefix map, and
+`components/shell/route-role-guard.tsx` applies it inside `AppShell` so the 404 renders with the
+app's own chrome, exactly as the admin one does. This is not new policy: it is the allocation
+`nav-items.ts` already makes and `landingRouteForRole` already assumes — a hidden nav item was
+simply never a permission, so typing the URL walked straight past it. Unlisted routes are
+allowed by default, deliberately, so shared and parameterised routes need no entry and a route
+added later is not silently unreachable.
+
+**D-178. A missing table now degrades to a localised sentence instead of a 500.** Schema changes
+here are applied by hand (C2), so there is a real window in which the code is deployed and the
+`application` table is not there — and the admin dashboard links to a queue that answered with
+an opaque `INTERNAL` error and no indication why. Postgres reports an unknown relation as
+**42P01**; that is a deployment state, not a fault. The service now converts it to a 503
+`APPLICATIONS_NOT_PROVISIONED`, checked on the error and on its `cause` (the driver error can
+arrive wrapped — the same trap that once made a constraint violation look like a generic 500),
+and the screen renders a plain sentence in all three locales with **no retry button**, because
+retrying cannot help. Nothing is cached, so the moment the table exists every one of those calls
+starts working with no restart.
+
+`lib/use-async-data.ts` grew an `errorValue` alongside its boolean `error` to make this
+possible. Discarding the rejection forced any screen that needs to tell one failure from another
+to bypass the hook entirely and reimplement the catch it exists to provide. The boolean stays,
+so every existing call site is untouched.
+
+**D-179. Two horizontal-overflow bugs at 390px, both caused by `min-width: auto`.** `/apply`
+pushed the page 6px sideways and `/dev/tokens` 20px. In both cases a flex or grid item refused
+to shrink below its own min-content width: on `/apply` the card's min-content width was set by a
+header row where a fixed-114px language pill sat beside a title whose longest Armenian word does
+not break, so the card came out 372px wide inside a 342px content box. Fixed with `min-w-0` and
+`flex-wrap` so the pill drops below the title rather than competing with it; `/dev/tokens` needed
+`flex-wrap` on its inner control rows, not just the outer group. Re-measured: **overflow 0 on
+all nine public screens at both widths.**
+
+**D-180. Authorisation was verified to be genuinely server-side, and the one thing that looked
+like a hole is not one.** An empty-bodied `POST /api/marks/publish` returns **422** to a student,
+not 403, because the route runs `safeParse` before calling the service. That reads like a student
+reaching a teacher's mark-entry endpoint. It is not: every function in
+`gradebook/service.ts` opens with `requireTeacher(auth)`, with `requireAssignment` behind it as
+a second layer. Proved rather than argued, by sending WELL-FORMED bodies whose ids cannot match
+anything — student gets **403 FORBIDDEN** on `POST /api/marks/publish`, `POST /api/assessments`,
+`PUT /api/marks` and `GET /api/export`; admin gets **403** on the three mark-entry endpoints
+(only teachers enter marks); teacher gets 404, having reached the handler and found no such
+term. Recorded because the 422-before-403 ordering does tell an unauthorised caller the endpoint
+exists and what shape it wants before refusing them. That is an information-ordering nuance with
+no reachable action behind it, and moving the role check ahead of validation across roughly
+twenty routes is a large change for a small benefit — reported rather than done.
+
+**D-181. Dev-only routes really do vanish from a production build.** `/api/auth/dev/demo-accounts`
+and `/api/auth/dev/last-reset-token` are wrapped in `if (env.NODE_ENV !== "production")`, and
+that was verified by running a second backend with `NODE_ENV=production` and hitting both as an
+authenticated admin: **dev=200/422, prod=404/404**. `/dev/tokens` is a frontend proof page with
+no auth and no data (roadmap Phase 4 Done-when #1) and remains publicly reachable in production;
+noted rather than removed, since deleting a roadmap deliverable is a decision.
+
+**D-182. Five "failures" in the first interaction run were the test's fault, and the test was
+fixed rather than the app.** The QR sheet paints an **SVG** into a 220px box, not a `<canvas>`;
+the gradebook grid is CSS-grid divs with **176 `<button>` mark cells**, not a `<table>` with
+`<td>`s; the load-more control only renders when `total > shown`, so it was absent after a query
+with 3 results; only STUDENT rows navigate to a detail screen, and the probe was still on the
+teachers tab; and `/admin/institution` is a label-only form whose entire text is legitimately 40
+characters (3 inputs, API 200). A sixth, later, was a fixed `waitForTimeout` sampling a
+half-rendered client-side navigation. All six checks were rewritten against how the app is
+actually built — a suite that cries wolf is worse than no suite. Final state: **28 assertions,
+0 failures.** Recorded because this is now the third time in this project that a surprising
+measurement turned out to be the measurement rather than the code.

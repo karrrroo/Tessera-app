@@ -23,6 +23,7 @@ import {
   setDraft,
 } from "@/components/gradebook/draft-store";
 import { gradebookApi, type GradebookMark, type GradebookResponse, type TeacherClass } from "@/lib/api/gradebook";
+import { ScreenError } from "@/components/record/screen-error";
 
 const FLUSH_DEBOUNCE_MS = 600;
 
@@ -32,6 +33,8 @@ export default function GradebookPage() {
   const searchParams = useSearchParams();
 
   const [classes, setClasses] = useState<TeacherClass[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadSeq, setLoadSeq] = useState(0);
   const [gradebook, setGradebook] = useState<GradebookResponse | null>(null);
   const [version, setVersion] = useState(0);
   const [newColumnId, setNewColumnId] = useState<string | null>(null);
@@ -51,15 +54,35 @@ export default function GradebookPage() {
   const active = classes?.find((c) => c.classId === classParam && c.subjectId === subjectParam) ?? null;
   const groupKey = active ? draftGroupKey(active.classId, active.subjectId, termParam ?? active.termId ?? "") : null;
 
+  // A real bug, found by sweeping every route as every role: this `.then()`
+  // had no rejection handler, so any failure left the promise unhandled and
+  // the screen permanently, silently blank — the exact pattern
+  // lib/use-async-data.ts was written to eliminate, which this screen was
+  // never converted to. It reproduced every time: a student or admin opening
+  // /gradebook got a 403, an uncaught "FORBIDDEN" page error, and a white
+  // page. Role guarding now stops those two from arriving here at all
+  // (lib/route-access.ts), but a teacher hitting a transient failure was the
+  // same white page, so the rejection is handled properly rather than only
+  // being made harder to reach.
   useEffect(() => {
-    gradebookApi.getClasses().then((rows) => {
-      setClasses(rows);
-      if (!classParam && rows[0]) {
-        router.replace(`/gradebook?class=${rows[0].classId}&subject=${rows[0].subjectId}&term=${rows[0].termId}`);
-      }
-    });
+    let cancelled = false;
+    gradebookApi.getClasses().then(
+      (rows) => {
+        if (cancelled) return;
+        setClasses(rows);
+        if (!classParam && rows[0]) {
+          router.replace(`/gradebook?class=${rows[0].classId}&subject=${rows[0].subjectId}&term=${rows[0].termId}`);
+        }
+      },
+      () => {
+        if (!cancelled) setLoadFailed(true);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadSeq]);
 
   const flush = useCallback(async () => {
     const currentActive = activeRef.current;
@@ -198,6 +221,16 @@ export default function GradebookPage() {
     setClasses((prev) => prev?.map((c) => (c.classId === active.classId && c.subjectId === active.subjectId ? { ...c, draftCount: 0 } : c)) ?? null);
   }
 
+  if (loadFailed) {
+    return (
+      <ScreenError
+        onRetry={() => {
+          setLoadFailed(false);
+          setLoadSeq((n) => n + 1);
+        }}
+      />
+    );
+  }
   if (!classes) return <main className="flex-1 p-8" />;
 
   const draftCount = groupKey ? getGroupEntries(groupKey).length : 0;

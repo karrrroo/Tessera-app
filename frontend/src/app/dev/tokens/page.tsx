@@ -86,8 +86,11 @@ export default function DevTokensPage() {
         </p>
       </div>
 
+      {/* Each inner row wraps too, not just the outer group: the four
+          background buttons alone exceeded a 390px viewport's content box and
+          pushed this page 20px sideways. */}
       <div className="flex flex-wrap gap-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(["dark", "light"] as const).map((v) => (
             <button
               key={v}
@@ -99,7 +102,7 @@ export default function DevTokensPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(["deep", "coal", "cream", "grey"] as const).map((v) => (
             <button
               key={v}

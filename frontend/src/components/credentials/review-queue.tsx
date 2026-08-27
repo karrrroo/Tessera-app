@@ -39,11 +39,19 @@ export function ReviewQueue() {
 
   useEffect(() => {
     if (user?.role !== "teacher") return;
-    gradebookApi.getClasses().then((classes) => {
-      const seen = new Map<string, SubjectFilter>();
-      for (const c of classes) seen.set(c.subjectId, { id: c.subjectId, nameHy: c.subjectNameHy, nameEn: c.subjectNameEn, nameRu: c.subjectNameRu });
-      setSubjects([...seen.values()]);
-    });
+    // The list fetch below already handles its rejection; this one, which
+    // only populates the subject filter chips, did not — so a failure here
+    // was an unhandled rejection even though the screen itself still worked.
+    // No filter chips is the correct degradation: the queue is fully usable
+    // without them.
+    gradebookApi.getClasses().then(
+      (classes) => {
+        const seen = new Map<string, SubjectFilter>();
+        for (const c of classes) seen.set(c.subjectId, { id: c.subjectId, nameHy: c.subjectNameHy, nameEn: c.subjectNameEn, nameRu: c.subjectNameRu });
+        setSubjects([...seen.values()]);
+      },
+      () => setSubjects([]),
+    );
   }, [user?.role]);
 
   useEffect(() => {

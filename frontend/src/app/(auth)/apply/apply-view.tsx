@@ -133,10 +133,18 @@ export function ApplyView({ open }: { open: boolean }) {
   } as const;
   const fieldClass = "w-full rounded-2xl border px-3.5 py-2.5 text-sm";
 
+  // min-w-0 on the card is load-bearing. As a grid item it gets `min-width:
+  // auto`, which refuses to shrink below its own min-content width — and that
+  // width is set by the header row, where a fixed-114px language pill sits
+  // next to a title whose longest Armenian word does not break. Measured at
+  // 390px before the fix: the card came out 372px wide inside a 342px content
+  // box and pushed the whole page 6px sideways.
   const card = (
-    <Glass radius={28} className="login-card relative z-10 w-full max-w-[520px] space-y-5 p-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
+    <Glass radius={28} className="login-card relative z-10 min-w-0 w-full max-w-[520px] space-y-5 p-8">
+      {/* flex-wrap so the pill drops below the title rather than competing
+          with it for width on a narrow screen. */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
           <h1 className="font-serif text-xl font-semibold" style={{ color: "var(--ink)" }}>
             {open ? t.apply.title : t.apply.closedTitle}
           </h1>

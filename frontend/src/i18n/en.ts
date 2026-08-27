@@ -613,7 +613,8 @@ const dict = {
       "openForm": "Open the account-creation form",
       "loadError": "The applications could not be loaded.",
       "actionError": "The action failed.",
-      "deleteOnlyDecided": "Only a decided application can be deleted."
+      "deleteOnlyDecided": "Only a decided application can be deleted.",
+      "notProvisioned": "The admissions section is not ready yet — its database table has not been created."
     }
   },
   "apply": {

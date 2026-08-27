@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { adminApi, type Institution } from "@/lib/api/admin";
 import { useT } from "@/i18n/locale-provider";
+import { ScreenError } from "@/components/record/screen-error";
 
 export default function InstitutionPage() {
   const t = useT();
@@ -10,13 +11,27 @@ export default function InstitutionPage() {
   const [form, setForm] = useState({ name: "", region: "", type: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadSeq, setLoadSeq] = useState(0);
 
+  // The rejection handler is the point: without it a failed load left this
+  // screen blank forever with an unhandled promise behind it.
   useEffect(() => {
-    adminApi.getInstitution().then((row) => {
-      setInstitution(row);
-      setForm({ name: row.name, region: row.region, type: row.type });
-    });
-  }, []);
+    let cancelled = false;
+    adminApi.getInstitution().then(
+      (row) => {
+        if (cancelled) return;
+        setInstitution(row);
+        setForm({ name: row.name, region: row.region, type: row.type });
+      },
+      () => {
+        if (!cancelled) setLoadFailed(true);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSeq]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +46,16 @@ export default function InstitutionPage() {
     }
   }
 
+  if (loadFailed) {
+    return (
+      <ScreenError
+        onRetry={() => {
+          setLoadFailed(false);
+          setLoadSeq((n) => n + 1);
+        }}
+      />
+    );
+  }
   if (!institution) return null;
 
   return (

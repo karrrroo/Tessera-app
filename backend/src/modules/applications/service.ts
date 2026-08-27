@@ -8,6 +8,7 @@ import { signTranscriptKey, verifyTranscriptKey } from "./transcript-key.js";
 import { MAIN_SCHOOL, type ApplicationCreateInput } from "./validation.js";
 
 const APPLICATIONS_CLOSED = () => new ApiError(403, "APPLICATIONS_CLOSED");
+const APPLICATIONS_NOT_PROVISIONED = () => new ApiError(503, "APPLICATIONS_NOT_PROVISIONED");
 const APPLICATION_SCHOOL_NOT_ACCEPTING = () => new ApiError(422, "APPLICATION_SCHOOL_NOT_ACCEPTING");
 const APPLICATION_DUPLICATE_PENDING = () => new ApiError(409, "APPLICATION_DUPLICATE_PENDING");
 const APPLICATION_TRANSCRIPT_MISSING = () => new ApiError(404, "APPLICATION_TRANSCRIPT_MISSING");
@@ -30,6 +31,41 @@ export type AdminApplication = Omit<repo.ApplicationRow, "transcriptKey"> & {
 function toAdminView(row: repo.ApplicationRow): AdminApplication {
   const { transcriptKey, ...rest } = row;
   return { ...rest, transcriptToken: transcriptKey ? signTranscriptKey(row.id) : null };
+}
+
+/**
+ * Turns "the `application` table does not exist" into a clean, specific 503
+ * instead of a 500.
+ *
+ * This matters for shipping, not just for tidiness. Schema changes on this
+ * project are applied by hand (C2), so there is a real window in which the
+ * code is deployed and the table is not yet there — and during that window the
+ * admin dashboard links to a queue that would otherwise answer with an opaque
+ * INTERNAL error and no indication of why. Postgres reports an unknown
+ * relation as 42P01; that is a deployment state, not a fault, and the UI can
+ * say so plainly.
+ *
+ * Self-healing: nothing is cached, so the moment the table exists every one of
+ * these calls starts working with no restart.
+ */
+async function guardTable<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    if (isUndefinedTable(err)) throw APPLICATIONS_NOT_PROVISIONED();
+    throw err;
+  }
+}
+
+function isUndefinedTable(err: unknown): boolean {
+  // 42P01 = undefined_table. Checked on the error and on its cause, because
+  // the driver error can arrive wrapped — the same wrapped-error trap that
+  // once made a Postgres constraint violation look like a generic 500.
+  const code = (e: unknown) =>
+    typeof e === "object" && e !== null && "code" in e ? (e as { code?: unknown }).code : undefined;
+  if (code(err) === "42P01") return true;
+  const cause = typeof err === "object" && err !== null && "cause" in err ? (err as { cause?: unknown }).cause : undefined;
+  return code(cause) === "42P01";
 }
 
 export function applicationsOpen(): boolean {
@@ -63,7 +99,7 @@ export async function submitApplication(
   // The durable half of the same limit: the in-memory counter resets on
   // restart, this does not.
   const since = new Date(Date.now() - RATE_WINDOW_MS);
-  if ((await repo.countRecentByEmail(input.email, since)) >= RATE_MAX) {
+  if ((await guardTable(() => repo.countRecentByEmail(input.email, since))) >= RATE_MAX) {
     throw RATE_LIMITED(Math.ceil(RATE_WINDOW_MS / 1000));
   }
 
@@ -77,7 +113,7 @@ export async function submitApplication(
 
   let row: repo.ApplicationRow;
   try {
-    row = await repo.insertApplication(input, transcriptKey);
+    row = await guardTable(() => repo.insertApplication(input, transcriptKey));
   } catch (err) {
     // The partial unique index on (lower(email)) where status = 'pending'
     // turns a second pending application from the same address into a
@@ -109,11 +145,11 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 export async function listApplications(status: string): Promise<AdminApplication[]> {
-  return (await repo.listApplications(status)).map(toAdminView);
+  return (await guardTable(() => repo.listApplications(status))).map(toAdminView);
 }
 
 export async function getApplication(id: string): Promise<AdminApplication> {
-  const row = await repo.findApplication(id);
+  const row = await guardTable(() => repo.findApplication(id));
   if (!row) throw NOT_FOUND();
   return toAdminView(row);
 }
@@ -135,15 +171,15 @@ export async function approveApplication(id: string, adminUserId: string, idempo
   if (idempotencyKey) {
     const seen = await repo.findDecisionByIdempotencyKey(id, idempotencyKey);
     if (seen) {
-      const existing = await repo.findApplication(id);
+      const existing = await guardTable(() => repo.findApplication(id));
       if (existing) return buildApproval(existing);
     }
   }
-  const row = await repo.decideApplication(id, "approved", adminUserId);
+  const row = await guardTable(() => repo.decideApplication(id, "approved", adminUserId));
   if (!row) {
     // Either it does not exist, or it was already decided. Distinguishing the
     // two tells an admin something useful, so read once more to find out.
-    const existing = await repo.findApplication(id);
+    const existing = await guardTable(() => repo.findApplication(id));
     throw existing ? CONFLICT() : NOT_FOUND();
   }
   await repo.writeApplicationAuditLog({
@@ -179,13 +215,13 @@ export async function rejectApplication(
   if (idempotencyKey) {
     const seen = await repo.findDecisionByIdempotencyKey(id, idempotencyKey);
     if (seen) {
-      const existing = await repo.findApplication(id);
+      const existing = await guardTable(() => repo.findApplication(id));
       if (existing) return { application: toAdminView(existing), notified: false as const };
     }
   }
-  const row = await repo.decideApplication(id, "rejected", adminUserId, reason);
+  const row = await guardTable(() => repo.decideApplication(id, "rejected", adminUserId, reason));
   if (!row) {
-    const existing = await repo.findApplication(id);
+    const existing = await guardTable(() => repo.findApplication(id));
     throw existing ? CONFLICT() : NOT_FOUND();
   }
   await repo.writeApplicationAuditLog({
@@ -213,7 +249,7 @@ export async function deleteApplication(
   id: string,
   adminUserId: string,
 ): Promise<{ deletedRow: true; deletedObject: boolean }> {
-  const row = await repo.deleteApplication(id);
+  const row = await guardTable(() => repo.deleteApplication(id));
   if (!row) throw NOT_FOUND();
   await repo.writeApplicationDeletionAuditLog({
     actorUserId: adminUserId,
@@ -230,7 +266,7 @@ export async function deleteApplication(
 export async function readTranscript(token: string) {
   const verified = verifyTranscriptKey(token);
   if (!verified.ok) throw APPLICATION_LINK_INVALID();
-  const row = await repo.findApplication(verified.applicationId);
+  const row = await guardTable(() => repo.findApplication(verified.applicationId));
   if (!row || !row.transcriptKey) throw APPLICATION_TRANSCRIPT_MISSING();
   const object = await storage.read(row.transcriptKey);
   if (!object) throw APPLICATION_TRANSCRIPT_MISSING();
