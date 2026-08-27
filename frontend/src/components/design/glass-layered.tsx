@@ -14,12 +14,26 @@ export function GlassLayered({
   children,
   radius = 26,
   className,
+  contentClassName,
   style,
   solid = true,
 }: {
   children?: ReactNode;
   radius?: number;
+  /** Classes for the outer box only — sizing/positioning (width, max-width,
+   * the radius-affecting shape). Never put a spacing utility like
+   * `space-y-*` here: a real bug, found live, is that Tailwind's `space-y-*`
+   * margins apply to ALL direct children by DOM position, which includes
+   * this component's own decorative overlay layers (layer 2's glass fill,
+   * layer 3's top highlight) — not just the real content. That gave layer 2
+   * an unwanted `margin-bottom`, shrinking it short of the card's true
+   * bottom edge and leaving a visible seam there. Content spacing belongs
+   * on `contentClassName` instead, which only ever reaches the real
+   * children. */
   className?: string;
+  /** Classes for the content wrapper specifically — this is where
+   * `space-y-*` and similar sibling-spacing utilities belong. */
+  contentClassName?: string;
   style?: CSSProperties;
   /** Layer 1 (the fixed dark object). Default on, matching "tessera-v2-FINAL
    * (3).md" §5.3 everywhere this component is used — except the login card,
@@ -64,7 +78,7 @@ export function GlassLayered({
       {/* Layer 3: the top-edge highlight, its own layer rather than folded
           into layer 2's own box-shadow. */}
       <div aria-hidden className="absolute inset-x-0 top-0" style={{ height: 1, background: "var(--hair-top)" }} />
-      <div className="relative">{children}</div>
+      <div className={`relative ${contentClassName ?? ""}`}>{children}</div>
     </div>
   );
 }

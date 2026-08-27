@@ -1531,3 +1531,44 @@ screen. Both fixed with a real catch + `t.auth.errGeneric`. Separately, `forgot/
 dev-only reset-link anchor rendered the raw token as one unbroken string, forcing
 horizontal scroll at 390px — fixed with `break-all`.
 
+## 2026-08-27 (cont'd) — "Three items" round: the real cause of the corner/seam report
+
+**D-126. Found the actual, definitive cause of what's been reported across several rounds
+as "square corners" on the login card — it was never the geometry, it was a visible seam
+24px above the bottom edge.** Measured directly: the login card's own `className` carries
+`space-y-6` (meant to space out its real content — title, form, demo row). Tailwind's
+`space-y-*` utility applies its margin to direct children by DOM position, with no way to
+exempt specific ones — so it also landed on `GlassLayered`'s own decorative overlay
+layers (the frosted glass fill, the top highlight), which are additional direct children
+of the same element, never meant to participate in that spacing at all. The frosted-glass
+layer measured 24px shorter than the card itself (`margin-bottom: 24px`, computed and
+confirmed directly), leaving its bottom 24px unblurred — the raw mesh showing through
+directly reads as a different material right where the "square corner" reports keep
+landing. `document.elementFromPoint()` at all four corners, both before and after this
+fix, already showed the actual border-radius geometry was correct throughout — this was
+never a radius or `overflow` problem, which is why three earlier rounds of testing that
+specific geometry kept coming back clean while the report kept recurring anyway.
+
+Fixed at the source rather than special-casing the login card: `GlassLayered` now takes a
+separate `contentClassName` prop, applied only to its real content wrapper (which already
+receives the outer padding correctly, so nothing else moves) — `className` stays for
+outer sizing/positioning only. `login/page.tsx` moved `space-y-6` from `className` to
+`contentClassName`; `p-8` and the sizing classes stayed on `className`, since the padding
+is what correctly lets the glass blur read all the way to the card's own edge. Verified:
+the frosted layer now measures byte-for-byte equal to the card's own height (590.75px both,
+0px gap, `margin-bottom: 0px`), and the screenshot shows continuous, unbroken glass to all
+four corners with no seam anywhere.
+
+**D-127. The demo-row duplicate ("Աշակերտ՝ Անի Հ." appearing twice) is not a copy-paste bug
+in an array — verified precisely.** All three non-duplicated buttons sign in as exactly
+the role they claim (`Ադմինիստրատոր` → `/admin` as direktor@; `Ուսուցիչ...Սարգսյան` →
+`/gradebook` as Բագրատ Պողոսյան). The two identical-looking student buttons are a real
+consequence of D-123's finding: `nor@demo.tessera.am`'s `must_change_password` flag is
+still `false` (confirmed again, unchanged since last report — not reset), so it's now
+indistinguishable from `ani@` by the filter `DemoRow` uses, and both render the same fixed
+per-role label. This is worse than a cosmetic duplicate: the label reads "Ani H." for
+both, but the FIRST of the two buttons actually signs in as `nor@`, whose real name —
+confirmed via a read-only query — is Քրիստինե Խաչատրյան (Kristine Khachatryan), not Ani at
+all. Not fixed; the underlying data state needs the user's decision (see the report), not
+a frontend workaround.
+

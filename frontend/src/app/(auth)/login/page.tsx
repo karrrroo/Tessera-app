@@ -194,7 +194,13 @@ export default function LoginPage() {
             specifically, even the small blur-reachable corner accent still
             read as a residual dark smudge. Every other GlassLayered surface
             (the nav pill, sheets, modals) keeps layer 1 as specified. */}
-        <GlassLayered radius={28} solid={false} className="login-card w-full max-w-[360px] space-y-6 p-8" style={cardStyle}>
+        <GlassLayered
+          radius={28}
+          solid={false}
+          className="login-card w-full max-w-[360px] p-8"
+          contentClassName="space-y-6"
+          style={cardStyle}
+        >
           {cardBody}
         </GlassLayered>
       </div>
