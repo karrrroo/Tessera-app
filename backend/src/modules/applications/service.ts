@@ -68,8 +68,28 @@ function isUndefinedTable(err: unknown): boolean {
   return code(cause) === "42P01";
 }
 
-export function applicationsOpen(): boolean {
-  return env.APPLICATIONS_OPEN;
+/**
+ * "Open" means the flag is set AND there is a table to write to.
+ *
+ * The flag alone was not enough: with `APPLICATIONS_OPEN=true` and no
+ * `application` table, the login screen showed the link and `/apply` rendered
+ * the full form, and every submission failed at the insert. That is exactly
+ * what B2 forbids — a form that takes a child's details and drops them is
+ * worse than a disabled button. A missing table now reads as closed, so the
+ * link is absent from the page source and `/apply` shows its closed state.
+ *
+ * Not cached, so the moment the table is created this flips to open with no
+ * restart and no redeploy.
+ */
+export async function applicationsOpen(): Promise<boolean> {
+  if (!env.APPLICATIONS_OPEN) return false;
+  try {
+    return await repo.tableExists();
+  } catch {
+    // Database unreachable: report closed rather than offering a form whose
+    // submission cannot be stored.
+    return false;
+  }
 }
 
 const RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -88,7 +108,7 @@ export async function submitApplication(
   transcript: { buffer: Buffer; mime: string; ext: string; originalName: string } | null,
   context: { ip: string },
 ): Promise<PublicApplicationReceipt> {
-  if (!env.APPLICATIONS_OPEN) throw APPLICATIONS_CLOSED();
+  if (!(await applicationsOpen())) throw APPLICATIONS_CLOSED();
 
   // B2: never accept an application that cannot be processed.
   if (input.schoolChoice !== MAIN_SCHOOL) throw APPLICATION_SCHOOL_NOT_ACCEPTING();

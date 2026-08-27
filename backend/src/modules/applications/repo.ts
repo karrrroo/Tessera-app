@@ -164,3 +164,23 @@ export async function writeApplicationDeletionAuditLog(input: {
     after: null,
   });
 }
+
+/**
+ * Whether the `application` table has actually been created.
+ *
+ * Exists because B2's rule — "Never accept an application you cannot process;
+ * a form that swallows a child's data and does nothing with it is worse than a
+ * disabled button" — is violated by offering the form while the table is
+ * missing. `APPLICATIONS_OPEN=true` alone was enough to render the login link
+ * and the whole form, and every submission would then have failed at the
+ * insert. So "open" now means the flag AND somewhere to put the row.
+ *
+ * `to_regclass` returns null instead of raising for an unknown relation, so
+ * this is a single cheap lookup with no error handling to get wrong.
+ */
+export async function tableExists(): Promise<boolean> {
+  const [row] = await db.execute<{ present: string | null }>(
+    sql`select to_regclass('public.application')::text as present`,
+  ).then((r) => (Array.isArray(r) ? r : (r as { rows: { present: string | null }[] }).rows));
+  return Boolean(row?.present);
+}

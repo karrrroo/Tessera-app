@@ -22,11 +22,11 @@ const client = new pg.Client({
   ssl: isLocalHost ? false : { rejectUnauthorized: true },
 });
 
-// 23, not 22: group B adds `application`. Per B1 this check EXPECTS the new
-// table rather than being relaxed to tolerate its absence — so until
-// docs/reference/tessera-schema-application.sql has been applied by hand,
-// schema:check fails here, on purpose, and that failure is the reminder.
-const EXPECTED_TABLE_COUNT = 23;
+// 24, not the original 22: group B adds `application` and group A5 adds
+// `iter_message`. Both are additive files applied by hand (C2) and both are
+// EXPECTED here rather than tolerated — if either is ever missing, this check
+// says which one and which file to apply.
+const EXPECTED_TABLE_COUNT = 24;
 const EXPECTED_ENUMS = {
   user_role: ["student", "teacher", "admin"],
   locale_code: ["hy", "en", "ru"],
@@ -178,6 +178,67 @@ try {
     } else {
       fail(`${table}.${column} should be nullable, found: ${JSON.stringify(rows[0])}`);
     }
+  }
+
+  // `iter_message` (group A5). Reverses D-57, which had deliberately kept chat
+  // history out of the database; D-173 records that, and that Q10 (retention
+  // for minors' messages) is still unresolved while this table holds exactly
+  // that data.
+  const { rows: iterRows } = await client.query(
+    `select column_name, data_type, is_nullable
+       from information_schema.columns
+      where table_schema = 'public' and table_name = 'iter_message'
+      order by ordinal_position`,
+  );
+  if (iterRows.length === 0) {
+    fail(
+      "table `iter_message` is missing — apply docs/reference/tessera-schema-iter-message.sql " +
+        "by hand (additive, no DROP). Iter's per-user history cannot be read or written until it exists.",
+    );
+  } else {
+    const byIter = new Map(iterRows.map((r) => [r.column_name, r]));
+    const EXPECTED_ITER_COLUMNS = [
+      ["id", "uuid", "NO"],
+      ["user_id", "uuid", "NO"],
+      ["session_id", "uuid", "NO"],
+      ["screen", "text", "YES"],
+      ["locale", "USER-DEFINED", "NO"],
+      ["body", "text", "NO"],
+      ["reply", "text", "YES"],
+      ["created_at", "timestamp with time zone", "NO"],
+    ];
+    let iterOk = true;
+    for (const [name, type, nullable] of EXPECTED_ITER_COLUMNS) {
+      const col = byIter.get(name);
+      if (!col) {
+        fail(`iter_message.${name} is missing`);
+        iterOk = false;
+      } else if (col.data_type !== type || col.is_nullable !== nullable) {
+        fail(`iter_message.${name} should be ${type} null=${nullable}, found ${col.data_type} null=${col.is_nullable}`);
+        iterOk = false;
+      }
+    }
+    if (iterOk) ok(`iter_message has all ${EXPECTED_ITER_COLUMNS.length} expected columns`);
+
+    const { rows: iterIdx } = await client.query(
+      `select indexname from pg_indexes where schemaname = 'public' and tablename = 'iter_message'`,
+    );
+    if (iterIdx.some((r) => r.indexname === "iter_message_user_created_idx")) {
+      ok("index iter_message_user_created_idx exists");
+    } else {
+      fail("index iter_message_user_created_idx is missing on iter_message");
+    }
+
+    // The cascade is the only thing currently standing in for a retention
+    // policy: it at least guarantees that erasing a user erases their messages.
+    const { rows: fk } = await client.query(
+      `select rc.delete_rule
+         from information_schema.referential_constraints rc
+         join information_schema.table_constraints tc on tc.constraint_name = rc.constraint_name
+        where tc.table_name = 'iter_message' and tc.constraint_type = 'FOREIGN KEY'`,
+    );
+    if (fk.some((r) => r.delete_rule === "CASCADE")) ok("iter_message.user_id cascades on delete");
+    else fail(`iter_message.user_id should cascade on delete, found ${JSON.stringify(fk)}`);
   }
 
   const { rows: emailRows } = await client.query(

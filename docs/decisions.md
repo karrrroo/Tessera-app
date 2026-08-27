@@ -2308,3 +2308,95 @@ half-rendered client-side navigation. All six checks were rewritten against how 
 actually built — a suite that cries wolf is worse than no suite. Final state: **28 assertions,
 0 failures.** Recorded because this is now the third time in this project that a surprising
 measurement turned out to be the measurement rather than the code.
+
+**D-183. Both outstanding tables were created, on explicit instruction, and nothing else in the
+database moved.** The user was asked how they wanted the schema change done — their standing rule
+was that schema changes stay in their hands — and chose to have both `application` (group B) and
+`iter_message` (group A5) applied. The runner refused to proceed unless each file was free of
+`DROP`/`TRUNCATE`/`DELETE` and of any `ALTER` to a table it did not itself create, skipped any
+table that already existed, ran each file in a transaction, and compared the row count of every
+pre-existing table before and after. Result: **22 tables to 24, and 29,711 rows before and
+29,711 rows after** — no pre-existing table changed its row count, none went missing. `schema:check`
+was extended to expect `iter_message` by shape too (eight columns, the keyset index, and the
+`on delete cascade` on `user_id`) and **passes for the first time in this sequence**.
+
+One self-inflicted bug worth recording: the first attempt to add those checks silently did
+nothing, because the guard was `if "iter_message" not in s` and the comment inserted moments
+earlier already contained that word. The check block was missing while the script reported
+success. Caught by grepping the file rather than trusting the script's own output.
+
+**D-184. "Applications are open" now means the flag AND a table to write to.** With
+`APPLICATIONS_OPEN=true` and no `application` table, the login screen rendered the Apply link and
+`/apply` rendered the entire form, and every submission would have failed at the insert. That is
+exactly what B2 forbids — "Never accept an application you cannot process; a form that swallows a
+child's data and does nothing with it is worse than a disabled button" — and the flag alone was
+enough to produce it. `applicationsOpen()` is now async and checks `to_regclass('public.application')`
+as well as the flag, `submitApplication` uses the same definition rather than the raw flag, and a
+missing table therefore reads as **closed**: no link in the page source, `/apply` in its closed
+state, and `POST` refused with `APPLICATIONS_CLOSED` instead of a 503. Verified in both directions
+before and after the table existed. Nothing is cached, so creating the table flipped it to open
+with no restart.
+
+**D-185. Group B's four blocked DONE-WHEN items now pass, 23 assertions to 0 failures.** A PDF
+submission reaches the queue and its transcript downloads through the signed key (200, 4096 bytes,
+`%PDF-` magic, `Cache-Control: no-store, private`); a tampered token and a token with a rewritten
+expiry are both refused with `APPLICATION_LINK_INVALID`; the transcript is 401 without a session.
+Reject records the decision with `notified: false` and puts the reason in `audit_log` (the row has
+no column for it); delete removes the row, the stored blob and its metadata sidecar, and logs the
+deletion. Approve returns the prefill with `accountCreated: false` and — measured directly against
+the database — creates **no user row and no student row** (`user` 223→223, `student` 202→202);
+replaying its Idempotency-Key repeats, a new key on a decided row conflicts with 409, and a missing
+key is refused with 400. The rate limit fires within the hourly quota and reports `retryAfter=3597`.
+The run deleted every applicant it created and asserted the table and object store were left as
+found (0 rows, 0 blobs, 0 sidecars).
+
+Two corrections to the test rather than the code, both mine: the local storage adapter writes a
+blob **and** a `.meta.json` sidecar per object, so an assertion of "+1 file" was wrong; and the
+first ordering ran the rate-limit test in the middle and then had no quota left to submit the
+application the delete test needed. The rate limiter is in-memory, so restarting the backend clears
+it between runs.
+
+**D-186. Group A5's server-side history is built, and the isolation it turns on was verified from
+three sides.** `iter_message` now stores one row per exchange, and **every** query in
+`iter/repo.ts` takes a userId and puts it in the WHERE clause — there is deliberately no function
+that reads a message by id alone, so an endpoint cannot leak one conversation to another because
+the query layer offers no way to ask without saying whose. The user id comes only from
+`req.auth.sub`; no path segment, query parameter or body field can change it.
+
+Verified, 16 assertions to 0 failures: storing an exchange as ani and then reading its id as the
+teacher gives **404 NOT_FOUND**, as does reading it as the **admin** — there is no privileged path,
+which is the answer that matters most for minors' messages. `NOT_FOUND` rather than `FORBIDDEN` is
+deliberate: confirming a message exists but is not yours is itself a disclosure. The teacher's own
+history listing contains none of ani's text; a forged far-future cursor still returns nothing;
+a malformed cursor is rejected with 422 rather than ignored; paging is keyset (a full page reports
+a cursor, a short page reports none, and consecutive pages do not overlap); and a user can erase
+their own history. The panel loads that history on open and keeps IndexedDB as an offline cache —
+the local copy paints immediately, the server's copy replaces it, and a failed fetch leaves the
+cached copy standing rather than claiming the conversation never happened.
+
+A real bug surfaced while wiring it: `sessionId` was accepted by `sendMessageSchema` and then
+dropped by the route before it reached the service, so it had never been used for anything. It is
+now carried through, which `iter_message.session_id` requires.
+
+**D-187. Q10 is now live, not theoretical, and this is the last word on it until someone decides.**
+`iter_message` holds children's conversations and `application` holds personal details and uploaded
+school records for children who are not yet students. Nothing in the code deletes either on a
+schedule. What exists: a user can erase their own Iter history (`DELETE /api/iter/messages`), an
+admin can hard-delete a decided application including its stored file, and `iter_message.user_id`
+cascades so erasing a user erases their messages. Those are mechanisms, not a policy. **Q7 (data
+residency for minors) and Q10 (retention) block real-world use of both features**, and creating the
+tables has made that concrete rather than resolving it.
+
+**D-188. The end-to-end state at the close of this pass.** The route sweep reports **"No problems
+found"** across 120 authenticated page loads for the first time, with **broken links: none**. The
+Apply journey was driven in a real browser at 1440px and 390px — the link renders as a 13px
+`--ink-3` anchor reading "Դիմել ընդունելության համար", clicking it opens a 9-field form with zero
+overflow, submit is disabled until the form is valid, submitting shows the localised confirmation,
+and the submission arrives in the admin queue with a transcript token and its approve/download
+controls, with **zero console or page errors** throughout. Checks: `tsc` 0 in both workspaces,
+`next build` 0, `schema:check` **passed**, `tokens:check` passed, `i18n:check` passed,
+`name-search:check` 888 renderings with 0 mismatches, 28 interaction assertions with 0 failures,
+and eslint at its long-standing baseline of 10 problems in files this work did not touch.
+`data:audit` still reports its three pre-existing seed gaps (no departed student with published
+marks, no assessment carrying a topic, 201 QR credentials for 202 students), all already recorded
+in `data-gaps.md`.

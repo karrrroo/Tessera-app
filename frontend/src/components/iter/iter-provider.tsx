@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/state/auth-provider";
 import { usePathname } from "next/navigation";
-import { iterApi } from "@/lib/api/iter";
+import { iterApi, iterHistoryApi } from "@/lib/api/iter";
 import { loadMessages, saveMessages, type IterMessage } from "./iter-store";
 
 type IterContextValue = {
@@ -39,12 +39,38 @@ export function IterProvider({ children }: { children: ReactNode }) {
   const userId = user?.id;
   const greeted = userId ? greetedUserIds.has(userId) : false;
 
+  // Group A5: the panel loads history from the SERVER, per user, and the
+  // browser store becomes an offline cache rather than the source of truth.
+  //
+  // IndexedDB is read first and rendered immediately, then the server's copy
+  // replaces it. That ordering matters on a phone: the local copy paints at
+  // once instead of leaving the panel blank for a round trip, and the server's
+  // copy is what wins, so history follows a person to another device.
+  //
+  // A failed fetch keeps whatever the local cache had. That is the honest
+  // degradation — an empty panel would claim the conversation never happened.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    loadMessages(userId).then((stored) => {
-      if (!cancelled) setMessages(stored);
-    });
+    (async () => {
+      const cached = await loadMessages(userId);
+      if (!cancelled && cached.length > 0) setMessages(cached);
+      try {
+        const page = await iterHistoryApi.get({ limit: 50 });
+        if (cancelled) return;
+        // Stored newest-first, one row per exchange; the panel wants
+        // oldest-first, one bubble per turn.
+        const flat: IterMessage[] = [];
+        for (const row of [...page.items].reverse()) {
+          flat.push({ id: row.id + ":u", role: "user", text: row.body, at: row.createdAt });
+          if (row.reply) flat.push({ id: row.id, role: "model", text: row.reply, at: row.createdAt });
+        }
+        setMessages(flat);
+        void saveMessages(userId, flat);
+      } catch {
+        // Offline or refused — the cached copy above stands.
+      }
+    })();
     return () => {
       cancelled = true;
     };

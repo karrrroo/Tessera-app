@@ -42,16 +42,21 @@ const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png", "image/webp"
 const CONTENT_LENGTH_ALLOWANCE = 4096;
 
 /** Whether the form is accepting submissions, and what it offers. Public. */
-publicApplicationsRouter.get("/applications/status", (_req, res) => {
-  res.json({ open: service.applicationsOpen() });
-});
+publicApplicationsRouter.get(
+  "/applications/status",
+  asyncHandler(async (_req, res) => {
+    res.json({ open: await service.applicationsOpen() });
+  }),
+);
 
 publicApplicationsRouter.post(
   "/applications",
-  (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     // The closed check runs before the body is read at all: when applications
     // are closed there is no reason to accept 5MB from an anonymous caller.
-    if (!service.applicationsOpen()) {
+    // Checked again inside the service; this early exit only avoids accepting
+    // a 5MB body from an anonymous caller when the answer is already no.
+    if (!(await service.applicationsOpen())) {
       sendApiError(res, new ApiError(403, "APPLICATIONS_CLOSED"));
       return;
     }

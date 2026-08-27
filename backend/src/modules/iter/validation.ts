@@ -19,3 +19,11 @@ export const sendMessageSchema = z.object({
     .max(40)
     .default([]),
 });
+
+// The history cursor is a timestamp this API itself issued, so it is validated
+// as one rather than trusted. It is deliberately NOT a user id and cannot
+// become one: whose history comes back is decided by the token alone.
+export const historyQuerySchema = z.object({
+  cursor: z.string().datetime({ offset: true }).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});

@@ -553,3 +553,33 @@ export const application = pgTable("application", {
 	index("application_status_created_idx").on(table.status, table.createdAt.desc()),
 	check("application_status_check", sql`status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])`),
 ]);
+
+// Iter's per-user chat history (group A5). Reverses D-57, which had
+// deliberately kept messages out of the database so that no server-side
+// retention question about minors' conversations had to be answered; D-173
+// records that reversal and the fact that Q10 (retention) is STILL unresolved
+// while this table now holds exactly that data.
+//
+// One row per exchange, not per turn: it maps 1:1 onto the endpoint's existing
+// `{ id, storedAt, reply }` response. `body`, not `text`, because `text` is a
+// type name in Postgres and `support_ticket` already uses `body` for the same
+// thing. `on delete cascade` is the only thing currently standing in for a
+// retention policy — it at least guarantees that erasing a user erases their
+// messages.
+export const iterMessage = pgTable("iter_message", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	sessionId: uuid("session_id").notNull(),
+	screen: text(),
+	locale: localeCode().default('hy').notNull(),
+	body: text().notNull(),
+	reply: text(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [user.id],
+			name: "iter_message_user_id_fkey"
+		}).onDelete("cascade"),
+	index("iter_message_user_created_idx").on(table.userId, table.createdAt.desc()),
+]);
