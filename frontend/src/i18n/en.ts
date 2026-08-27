@@ -594,6 +594,17 @@ const dict = {
       "moreResults": "Showing {shown} of {total}",
       "loadMore": "Load more"
     },
+    "teach": {
+      "newTitle": "New teacher account",
+      "newSub": "Creates the login and a temporary password. The password is shown once.",
+      "newLink": "New teacher account →",
+      "emisId": "EMIS code",
+      "created": "Teacher account created",
+      "noAssignmentsYet": "No classes assigned yet. Assign them under Assignments.",
+      "toAssignments": "Go to assignments",
+      "errCreate": "The account could not be created.",
+      "errEmailTaken": "An account with this email address already exists."
+    },
     "apps": {
       "title": "Admission applications",
       "pending": "Pending",

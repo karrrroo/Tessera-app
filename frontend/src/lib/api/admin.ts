@@ -77,6 +77,16 @@ export type CreatedStudent = {
   login: string;
   temporaryPassword: string;
 };
+// Creating one teacher account. No classId and no birthDate, unlike
+// CreatedStudent: a teacher's classes are teaching assignments made afterwards
+// on /admin/assignments, and the schema has no column for a teacher's date of
+// birth. `temporaryPassword` is shown once and never recoverable.
+export type CreatedTeacher = {
+  teacher: { id: string; firstName: string; lastName: string; emisTeacherId: string | null };
+  login: string;
+  temporaryPassword: string;
+};
+
 export type Assignment = {
   id: string;
   teacherId: string;
@@ -227,6 +237,13 @@ export const adminApi = {
     birthDate?: string;
     email: string;
   }) => apiJson<CreatedStudent>("/api/admin/students", { method: "POST", body: JSON.stringify(data) }),
+  createTeacher: (data: {
+    firstName: string;
+    lastName: string;
+    patronymic?: string;
+    email: string;
+    emisTeacherId?: string;
+  }) => apiJson<CreatedTeacher>("/api/admin/teachers", { method: "POST", body: JSON.stringify(data) }),
   transitionEnrollment: (
     id: string,
     patch: { status: "transferred"; toClassId: string } | { status: "departed" } | { status: "graduated" },

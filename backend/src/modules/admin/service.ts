@@ -271,6 +271,52 @@ export async function addMidYearStudent(
   });
 }
 
+/**
+ * Creates one teacher account: a `user` row and a `teacher` row, in one
+ * transaction, with a temporary password returned exactly once.
+ *
+ * The same contract as `addMidYearStudent` and `reissueClassCredentials`: the
+ * plaintext is generated here, shown to the admin once, and never stored or
+ * recoverable afterwards; the account starts with `mustChangePassword` so the
+ * first thing the teacher does is replace it.
+ *
+ * No class and no teaching assignment. A teacher's classes are assignments
+ * made on /admin/assignments against a specific academic year, subject and
+ * term, and a teacher with none is a valid record — someone hired before the
+ * timetable exists. Bundling an assignment into account creation would mean
+ * either inventing a default or refusing to create a teacher until the
+ * timetable is ready.
+ *
+ * A duplicate email needs no handling here: `user.email` is citext UNIQUE and
+ * db/pg-errors.ts already maps that constraint to 409 USER_EMAIL_TAKEN, which
+ * is how the student path reports it too.
+ */
+export async function addTeacher(
+  institutionId: string,
+  data: { firstName: string; lastName: string; patronymic?: string; email: string; emisTeacherId?: string },
+) {
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+  return db.transaction(async (tx) => {
+    const [u] = await tx
+      .insert(user)
+      .values({ email: data.email, passwordHash, role: "teacher", mustChangePassword: true })
+      .returning();
+    const [t] = await tx
+      .insert(teacher)
+      .values({
+        userId: u.id,
+        institutionId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        patronymic: data.patronymic,
+        emisTeacherId: data.emisTeacherId,
+      })
+      .returning();
+    return { teacher: t, login: u.email, temporaryPassword };
+  });
+}
+
 // `enrollment` has an unconditional `unique(student_id, academic_year_id)`
 // constraint (tessera-schema.sql) — a student can have exactly one row per
 // year, full stop. The roadmap's own acceptance test for this endpoint

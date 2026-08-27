@@ -25,6 +25,11 @@ export default function AdminOverviewPage() {
         <Link href="/admin/students/new" className="text-sm underline" style={{ color: "var(--ink-2)" }}>
           {t.admin.stu.newLink}
         </Link>
+        {/* Its counterpart. Both account-creation paths sit together here so
+            an admin does not have to know that one exists to find the other. */}
+        <Link href="/admin/teachers/new" className="text-sm underline" style={{ color: "var(--ink-2)" }}>
+          {t.admin.teach.newLink}
+        </Link>
         <Link href="/admin/scan-anomalies" className="text-sm underline" style={{ color: "var(--ink-2)" }}>
           {t.admin.scanAnomalies} →
         </Link>

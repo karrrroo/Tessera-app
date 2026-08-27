@@ -22,6 +22,7 @@ import {
   classGenerateSchema,
   enrollmentPatchSchema,
   studentCreateSchema,
+  teacherCreateSchema,
   assignmentCreateSchema,
   importTemplateQuerySchema,
   importUploadQuerySchema,
@@ -254,6 +255,22 @@ adminRouter.post(
   asyncHandler(async (req: Request, res: Response) => {
     const data = parseOr422(studentCreateSchema, req.body);
     const row = await service.addMidYearStudent(req.institutionId!, data);
+    res.status(201).json(row);
+  }),
+);
+
+// Creating one teacher account, the counterpart of POST /students.
+//
+// Registered here, next to it, rather than beside the teacher SEARCH routes,
+// because the two creation endpoints share a contract worth keeping visible
+// together: both return a temporary password exactly once and neither is
+// idempotent. A duplicate email answers 409 USER_EMAIL_TAKEN via
+// db/pg-errors.ts, same as the student route.
+adminRouter.post(
+  "/teachers",
+  asyncHandler(async (req: Request, res: Response) => {
+    const data = parseOr422(teacherCreateSchema, req.body);
+    const row = await service.addTeacher(req.institutionId!, data);
     res.status(201).json(row);
   }),
 );

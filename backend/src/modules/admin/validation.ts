@@ -59,6 +59,22 @@ export const studentCreateSchema = z.object({
   email: z.string().email(),
 });
 
+// Creating one teacher account. Deliberately NOT a mirror of
+// studentCreateSchema: a student must be put in a class to exist meaningfully
+// (their marks hang off an enrolment), whereas a teacher's classes are
+// teaching assignments made afterwards on /admin/assignments and a teacher
+// with none is a perfectly valid record — someone hired before the timetable
+// is set. So there is no classId here, and no birthDate either: the schema
+// has no column for a teacher's date of birth.
+export const teacherCreateSchema = z.object({
+  firstName: z.string().trim().min(1),
+  lastName: z.string().trim().min(1),
+  patronymic: z.string().trim().min(1).optional(),
+  email: z.string().trim().email(),
+  // `teacher.emis_teacher_id` is nullable, and the admin may not have it yet.
+  emisTeacherId: z.string().trim().min(1).optional(),
+});
+
 export const assignmentCreateSchema = z.object({
   teacherId: z.string().uuid(),
   classId: z.string().uuid(),

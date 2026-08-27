@@ -2400,3 +2400,40 @@ and eslint at its long-standing baseline of 10 problems in files this work did n
 `data:audit` still reports its three pre-existing seed gaps (no departed student with published
 marks, no assessment carrying a topic, 201 QR credentials for 202 students), all already recorded
 in `data-gaps.md`.
+
+**D-189. Teacher accounts can now be created from the admin screen, alongside student accounts.**
+Requested directly: "I want to create accounts for teachers like I create accounts for new
+students." `POST /api/admin/teachers` and `/admin/teachers/new` mirror the student path's contract
+exactly — a `user` row and a `teacher` row in one transaction, a temporary password generated
+server-side and shown to the admin exactly once, never stored and never recoverable, and
+`must_change_password` set so the first thing the teacher does is replace it.
+
+ONE DELIBERATE DIFFERENCE, and it is the whole design of the screen: there is no class picker. A
+student needs an enrolment to exist meaningfully, because their marks hang off it, which is why
+that form makes a class mandatory. A teacher's classes are teaching assignments made per subject
+and term on `/admin/assignments`, and a teacher with none is a valid record — someone hired
+before the timetable is set. Bundling an assignment into account creation would mean either
+inventing a default or refusing to create a teacher until the timetable exists. The success panel
+links straight to Assignments instead, so the next step is one click away rather than hidden.
+There is also no birth date: the schema has no column for a teacher's, and C2 forbids adding one.
+`emis_teacher_id` is offered because the column exists and is nullable.
+
+A duplicate email needed no new code: `user.email` is `citext UNIQUE` and `db/pg-errors.ts`
+already maps that constraint to 409 `USER_EMAIL_TAKEN`, which was verified against the existing
+student route before writing the teacher one rather than assumed. The frontend gives that code its
+own sentence, since a taken address is the one failure an admin can actually act on.
+
+Verified by driving the screen in a browser, 19 assertions to 0 failures: the dashboard links to
+it beside the student link; the form opens with five fields and **no select element**; submit is
+disabled until the required fields are filled and enables when they are; submitting shows the
+credentials panel with a 9-character password and the Assignments link; the row stores the
+patronymic, the EMIS code, `role = teacher` and `must_change_password = true`; **the new teacher
+can then sign in with the password read off the screen and is sent to `/first-login`**; they are
+findable in the admin teacher search by both the Armenian spelling and its Latin transliteration
+(D-152's machinery working on a brand-new row); a duplicate email shows the specific Armenian
+message and keeps the form; and there is no horizontal overflow at 1440px or 390px. The run
+deleted the account afterwards and asserted the teacher and user counts returned to 20 and 223.
+
+Route gating came for free from D-177's map: `/admin/teachers/new` is under `/admin`, so the
+longest-prefix rule already makes it admin-only, and the sweep confirms a student or teacher
+opening it gets the not-found screen while an admin gets the form.
