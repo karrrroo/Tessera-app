@@ -54,7 +54,9 @@ function ForgotSentContent() {
         <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
           {t.auth.sentTitle}
         </h1>
-        <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+        {/* --ink-2, not --ink-3 — real glass over the mesh, same fix as
+            login/page.tsx. */}
+        <p className="text-sm" style={{ color: "var(--ink-2)" }}>
           {t.auth.sentBody}
         </p>
 
@@ -68,7 +70,7 @@ function ForgotSentContent() {
         </button>
 
         {devLink && (
-          <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+          <p className="text-xs" style={{ color: "var(--ink-2)" }}>
             {/* Dev-only convenience (NODE_ENV !== "production"), never shown to
                 real users — deliberately not localized. */}
             Dev: reset link{" "}
@@ -78,7 +80,7 @@ function ForgotSentContent() {
           </p>
         )}
 
-        <Link href="/login" className="block text-sm underline" style={{ color: "var(--ink-3)" }}>
+        <Link href="/login" className="block text-sm underline" style={{ color: "var(--ink-2)" }}>
           {t.auth.back}
         </Link>
       </Glass>

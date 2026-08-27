@@ -38,7 +38,9 @@ export default function ForgotPasswordPage() {
         <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
           {t.auth.recTitle}
         </h1>
-        <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+        {/* --ink-2, not --ink-3 — real glass over the mesh, same fix as
+            login/page.tsx. */}
+        <p className="text-sm" style={{ color: "var(--ink-2)" }}>
           {t.auth.recSub}
         </p>
         <form onSubmit={submit} className="space-y-4">
@@ -51,7 +53,7 @@ export default function ForgotPasswordPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-[18px] border border-hair bg-glass px-3 py-2 text-sm text-ink outline-none focus:border-hair-bright"
+              className="w-full rounded-[18px] border border-hair bg-glass px-3 py-2 text-sm text-ink focus:border-hair-bright"
             />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -64,7 +66,7 @@ export default function ForgotPasswordPage() {
             {t.auth.send}
           </button>
         </form>
-        <Link href="/login" className="block text-center text-sm underline" style={{ color: "var(--ink-3)" }}>
+        <Link href="/login" className="block text-center text-sm underline" style={{ color: "var(--ink-2)" }}>
           {t.auth.back}
         </Link>
       </Glass>

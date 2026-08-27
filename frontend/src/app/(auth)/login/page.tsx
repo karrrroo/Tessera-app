@@ -90,7 +90,7 @@ export default function LoginPage() {
           <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           {t.auth.remember}
         </label>
-        <Link href="/forgot" className="text-ink-3 underline hover:text-ink-2">
+        <Link href="/forgot" className="text-ink-2 underline hover:text-ink">
           {t.auth.forgot}
         </Link>
       </div>
@@ -124,7 +124,15 @@ export default function LoginPage() {
           <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
             {t.auth.title}
           </h1>
-          <p className="mt-1 text-[13px]" style={{ color: "var(--ink-3)" }}>
+          {/* --ink-2, not the usual --ink-3: this card is real glass over a
+              variable, blurred mesh (both the desktop and mobile instances,
+              per Glass's own .glass-panel — not a flat panel), not the
+              opaque surfaces --ink-3's 48%-opacity default assumes
+              elsewhere in the app. Measured live: --ink-3 here computed to
+              ~1.06:1 contrast against the mesh's lighter patches — --ink-2
+              (72% opacity) is the same token every other line on this card
+              already uses. */}
+          <p className="mt-1 text-[13px]" style={{ color: "var(--ink-2)" }}>
             {t.auth.sub}
           </p>
         </div>
@@ -133,7 +141,7 @@ export default function LoginPage() {
 
       {form}
 
-      <p className="text-center text-[12.5px]" style={{ color: "var(--ink-3)" }}>
+      <p className="text-center text-[12.5px]" style={{ color: "var(--ink-2)" }}>
         {t.auth.support}
       </p>
 

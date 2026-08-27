@@ -1464,3 +1464,16 @@ recompiling code out from under an active page — a strong sign the instability
 test observing its own target being edited live, not a defect in the gradebook's code
 itself. No fix applied; flagging instead of silently declaring it fixed.
 
+**D-120. Fixed the login-screen contrast bug across the whole `(auth)` family, not just
+the one line originally measured.** All five glass-over-mesh auth screens (`login`,
+`first-login`, `forgot`, `forgot/sent`, `reset/[token]`) had secondary text in `--ink-3`
+(48% opacity dark-theme) — correct for the opaque flat panels it's used on elsewhere in
+the app, measured at ~1:1 contrast here because these cards are real glass over a
+variable, blurred mesh, not a solid surface. Changed every such text node (and the
+shared `PasswordChecklist`'s unmet-requirement colour, used by both `first-login` and
+`reset`) to `--ink-2` (72%), the same token every OTHER line on these same cards already
+used. Also removed two more `outline-none` instances found via the same grep that
+found the original three (`forgot/page.tsx`'s email input) — same suppression of the
+global `:focus-visible` fix as before. Verified visually: the login card's sub-line
+reads clearly against the mesh in dark theme, where it was previously unreadable.
+

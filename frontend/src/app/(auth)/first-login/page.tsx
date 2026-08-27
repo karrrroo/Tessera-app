@@ -70,7 +70,11 @@ export default function FirstLoginPage() {
           <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
             {t.auth.firstTitle}
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+          {/* --ink-2, not --ink-3 — this card is real glass over the mesh,
+              not an opaque panel; --ink-3's 48% opacity measured near-
+              invisible against the mesh's lighter patches (same fix as
+              login/page.tsx). */}
+          <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
             {t.auth.firstBody}
           </p>
         </div>
@@ -92,7 +96,7 @@ export default function FirstLoginPage() {
             type="button"
             onClick={signOut}
             className="block w-full text-center text-[13px]"
-            style={{ color: "var(--ink-3)" }}
+            style={{ color: "var(--ink-2)" }}
           >
             {t.auth.signOut}
           </button>

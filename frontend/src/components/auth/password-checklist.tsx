@@ -14,7 +14,10 @@ export function PasswordChecklist({ password }: { password: string }) {
   return (
     <ul className="space-y-1 text-xs">
       {rules.map((r) => (
-        <li key={r.key} style={{ color: r.pass ? "var(--ok)" : "var(--ink-3)" }}>
+        // --ink-2, not --ink-3 — both callers (first-login, reset) sit this
+        // on a glass card over the mesh, not a flat panel; see
+        // login/page.tsx for the same fix and the measured contrast.
+        <li key={r.key} style={{ color: r.pass ? "var(--ok)" : "var(--ink-2)" }}>
           {r.pass ? "✓" : "○"} {t.auth[r.key]}
         </li>
       ))}

@@ -48,7 +48,9 @@ export default function ResetPasswordPage() {
           <h1 className="font-serif text-2xl" style={{ color: "var(--ink)" }}>
             {t.auth.newTitle}
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+          {/* --ink-2, not --ink-3 — real glass over the mesh, same fix as
+              login/page.tsx. */}
+          <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
             {t.auth.newSub}
           </p>
         </div>
