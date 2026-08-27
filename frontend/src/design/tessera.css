@@ -312,3 +312,18 @@
     transition: background-color var(--t-theme) var(--ease-out), color var(--t-theme) var(--ease-out);
   }
 }
+
+/* A real, found-live accessibility bug: no component anywhere sets its own
+   focus style, so every interactive element relies on the browser's UA
+   default outline — which several live checks found effectively invisible
+   (near-white against a near-white page) rather than absent outright. Not
+   a per-component fix: one global rule, keyed to `--accent` (already
+   guaranteed to contrast against both `--bg-base` and `--panel` in every
+   theme, since it's what every primary button already relies on for that).
+   `:where()` keeps this at effectively zero specificity so an existing,
+   more specific focus style anywhere would still win over it. `:focus-
+   visible`, not `:focus` — this must never show on a plain mouse click. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

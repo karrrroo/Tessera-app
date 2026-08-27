@@ -48,7 +48,7 @@ export function StudentMarksSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center tablet:items-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center tablet:items-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/45" onClick={close} aria-hidden />
       <div
         className="relative flex max-h-[85vh] w-full max-w-[420px] flex-col gap-3 overflow-y-auto rounded-t-[34px] p-6 tablet:rounded-[34px]"

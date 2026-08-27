@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { useT } from "@/i18n/locale-provider";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 // GB-5's exact copy, composed the same way the design source does:
 // `{draftCount} {sendB} {classLabel}{sendTo}` then sendB2 as its own
@@ -18,11 +20,17 @@ export function PublishDialog({
   onCancel: () => void;
 }) {
   const t = useT();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/45" onClick={onCancel} aria-hidden />
-      <div className="relative flex w-full max-w-sm flex-col gap-4 rounded-[26px] p-6" style={{ background: "var(--panel)", border: "1px solid var(--hair)" }}>
+      <div
+        ref={panelRef}
+        className="relative flex w-full max-w-sm flex-col gap-4 rounded-[26px] p-6"
+        style={{ background: "var(--panel)", border: "1px solid var(--hair)" }}
+      >
         <h2 className="font-serif text-lg font-semibold" style={{ color: "var(--ink)" }}>
           {t.scr.dlg.sendT}
         </h2>

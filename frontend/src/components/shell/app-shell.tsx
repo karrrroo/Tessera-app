@@ -43,7 +43,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     // rise with the page.
     const content = (
       <div className="relative h-full overflow-hidden bg-base">
-        <div className="h-full overflow-y-auto">{children}</div>
+        {/* The pill nav is 58px tall, docked at the bottom with its own
+            margin (pill-nav.tsx's `bottom-[calc(14px+safe-area)]`) — a
+            screen's own last content row needs at least that much (plus a
+            clear 28px, not flush against the pill) below it, or it renders
+            underneath/behind the glass rather than above it. Found live:
+            Settings' own Sign-out button was completely unreachable,
+            scrolled fully behind the pill. */}
+        <div className="h-full overflow-y-auto" style={{ paddingBottom: "calc(58px + env(safe-area-inset-bottom) + 28px)" }}>
+          {children}
+        </div>
         <PillNav items={tabs} role={role} />
         <IterButton variant="mobile" style={{ position: "absolute", right: 16, bottom: 116, zIndex: 70 }} />
         <IterPanel />

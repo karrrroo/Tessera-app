@@ -80,7 +80,7 @@ export default function LoginPage() {
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           autoComplete="username"
-          className="w-full rounded-[18px] border border-hair px-3 py-2 text-sm text-ink outline-none focus:border-hair-bright"
+          className="w-full rounded-[18px] border border-hair px-3 py-2 text-sm text-ink focus:border-hair-bright"
           style={{ background: "rgba(255,255,255,.06)", backdropFilter: "blur(22px) saturate(160%)", WebkitBackdropFilter: "blur(22px) saturate(160%)" }}
         />
       </label>

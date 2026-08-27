@@ -17,8 +17,14 @@ export function SidebarNav({ items, open, onToggle }: { items: NavItem[]; open: 
   const width = open ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
 
   return (
+    // top-16/h-[calc(100vh-4rem)], not top-0/h-screen: AppHeader is fixed at
+    // the same top:0 with a HIGHER z-index (20 vs this nav's 10), so at
+    // top:0 the header painted over the sidebar's own top 64px band —
+    // hiding the first nav item and the collapse-toggle button (`top-8`)
+    // underneath it. The content area already reserves this same 64px via
+    // its own `pt-16`; the sidebar needs the identical offset.
     <nav
-      className="fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-hair bg-panel py-4 transition-[width] duration-200"
+      className="fixed left-0 top-16 z-10 flex h-[calc(100vh-4rem)] flex-col border-r border-hair bg-panel py-4 transition-[width] duration-200"
       style={{ width, transitionTimingFunction: "var(--ease-out)" }}
     >
       <ul className="flex flex-1 flex-col gap-1 px-2">

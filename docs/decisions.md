@@ -1338,3 +1338,80 @@ same two-way shape and would likely mislabel an admin who reached either directl
 admin has no sidebar/pill entry that routes there today, so noted rather than changed —
 lower-priority, not user-reachable in the current nav.
 
+## 2026-08-27 (cont'd) — Debugging-pass fixes, batch 1
+
+Three parallel agents audited all 12 built screens against 6 checks each (console,
+theme/contrast, responsive, mobile chrome, network-error mapping, keyboard). This batch
+fixes the systemic findings — the ones that hit many screens at once — plus every
+Playwright-confirmed live bug that didn't need its own design decision.
+
+**D-109. A real, critical bug, independently reproduced by two of the three agents:
+picking an explicit Background then changing Theme directly (bypassing Background)
+desynced `data-tt`/`data-bg`, collapsing text-to-background contrast to ~1:1 on every
+screen.** `BackgroundProvider`'s auto-follow effect only ran `if (!explicitRef.current)`
+— correct for keeping a *deliberate* background choice sticky against the OS theme
+changing under "system", wrong for a person directly flipping Theme in Settings after
+already picking a background, since nothing then re-synced the two. Fixed by
+reconciling on lightness mismatch specifically (not on every theme change): if the
+current background's own light/dark nature now disagrees with the resolved theme, snap
+to the matching default (deep/cream) and persist it; a same-lightness change (e.g. deep
+→ coal) is left alone, since that's still a deliberate choice, not a bug to correct.
+Verified live: Cream (light) → Dark directly → auto-corrected to `deep`; back to Light →
+`cream`; picking Grey (light, same as current Light theme) is NOT overridden.
+
+**D-110. The missing-`.catch()` pattern from the earlier "student section" investigation
+turned out to be systemic — 5 files, not 1: `overview`, `subjects`, `archive`, and both
+mark-history sheets (the teacher's `CellHistorySheet`, the student's
+`MarkHistorySheet`).** Extracted the fix once (`lib/use-async-data.ts`, `useAsyncData`)
+rather than re-fixing it five different ways — settles both branches of the promise, and
+exposes `retry()` so the already-translated-but-never-wired `t.scr.err.retry` ("Try
+again") string finally has a button. `components/record/screen-error.tsx` is the shared
+full-page version (`overview`/`subjects`/`archive`); the two sheet components use a
+smaller inline version of the same three strings, since they're modals, not pages.
+
+**D-111. A real bug: Settings' own Sign-out button was completely unreachable on
+mobile, scrolled fully behind the pill nav — the same shortfall two agents measured (7
+and 9px short) on `overview`/`subjects`.** `AppShell`'s mobile content wrapper had no
+bottom clearance for the pill at all. Added `padding-bottom: calc(58px +
+env(safe-area-inset-bottom) + 28px)` to that one shared wrapper — fixes every mobile
+screen at once rather than per-screen. Verified: the sign-out button's box, after
+scrolling to it, sits fully inside a 390×844 viewport.
+
+**D-112. A real bug, and apparently present on every desktop screen with the sidebar
+open, though only reported by one agent (the other two didn't check this specific
+overlap): `AppHeader` (`z-20`, 64px, fixed) painted over `SidebarNav`'s own top 64px band
+(`top-0`, `z-10`), hiding the first nav item and the collapse-toggle button entirely.**
+The content area already reserves this 64px via its own `pt-16`; the sidebar just never
+got the matching offset. Changed to `top-16`/`h-[calc(100vh-4rem)]`. Verified: the first
+sidebar link now renders at y=80, fully clear of the header's y:0–64 band.
+
+**D-113. A real, systemic accessibility bug: no component in the app sets its own focus
+style, and the browser's own default outline computed as near-invisible (measured
+~1.0:1 contrast) rather than simply absent.** Added one global `:focus-visible` rule
+keyed to `--accent` (kept at near-zero specificity via `:where()`, so any more specific
+existing style would still win) rather than patching each component. Separately removed
+`outline-none` from the three inputs actually confirmed broken live (the login
+identifier field, `PasswordField`, Iter's composer) — that Tailwind utility has higher
+specificity than the new global rule and was suppressing it outright, not merely
+relying on a default. `mark-cell.tsx` and the admin-only inputs keep `outline-none` —
+not verified as broken and, for the gradebook cell grid specifically, likely already
+served by its own custom selection highlight; left alone rather than changed on
+suspicion.
+
+**D-114. A real bug: the Iter panel (`role="dialog"`, `aria-modal="true"`) didn't
+actually trap focus — Tab from its last element left the dialog and landed on the page
+behind it, confirmed live.** `aria-modal` describes intent; a browser doesn't enforce it
+on its own. Built `lib/use-focus-trap.ts` once and applied it everywhere the same
+`role="dialog"` shape has real focusable content: Iter, `SupersedeDialog`,
+`PublishDialog`, and `QrSheet` (the history sheets have no interactive content to trap
+among, so the hook is a no-op there — added anyway for consistency, costs nothing).
+
+**D-115. A real, and apparently app-wide, z-index bug: every dialog in the codebase uses
+`z-50`, while the floating Iter button sits at `zIndex: 70` — so every modal in the app,
+not only the one instance (`QrSheet`) an agent happened to test, rendered *behind* that
+floating button.** Raised all nine dialogs' overlay to `z-[100]`, comfortably above every
+other floating element (`IterButton` 70, the splash overlay 60, `AppHeader` 20).
+`admin/roster/page.tsx`'s own confirm modal has the identical `z-50` gap and no
+`role="dialog"` either, but that screen isn't reachable from any current nav (Group B
+hasn't started) — left alone rather than fixed in isolation from that work.
+

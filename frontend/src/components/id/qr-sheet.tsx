@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useT } from "@/i18n/locale-provider";
 import { useOnline } from "@/state/online-provider";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { TesseraQR } from "./tessera-qr";
 
 const DISMISS_THRESHOLD_PX = 80;
@@ -17,6 +18,8 @@ export function QrSheet({ payload, onClose }: { payload: string; onClose: () => 
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -44,9 +47,10 @@ export function QrSheet({ payload, onClose }: { payload: string; onClose: () => 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-end tablet:justify-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-end tablet:justify-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/45" onClick={onClose} aria-hidden />
       <div
+        ref={panelRef}
         className="relative flex w-full max-w-[380px] flex-col items-center gap-3.5 rounded-t-[34px] px-5.5 pb-6.5 pt-3 backdrop-blur-2xl tablet:rounded-[34px]"
         style={{
           background: "var(--glass)",

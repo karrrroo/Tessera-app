@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { gradeColorVar } from "@/design/grade-colors";
 import { useT } from "@/i18n/locale-provider";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 // No dedicated design copy exists for this exact dialog (only `T.scr.gb
 // .reason`, "Reason:", does) — kept minimal and structural rather than
@@ -21,11 +22,17 @@ export function SupersedeDialog({
   const [value, setValue] = useState(currentValue);
   const [reason, setReason] = useState("");
   const canSubmit = reason.trim().length > 0 && value !== currentValue;
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/45" onClick={onCancel} aria-hidden />
-      <div className="relative flex w-full max-w-sm flex-col gap-4 rounded-[26px] p-6" style={{ background: "var(--panel)", border: "1px solid var(--hair)" }}>
+      <div
+        ref={panelRef}
+        className="relative flex w-full max-w-sm flex-col gap-4 rounded-[26px] p-6"
+        style={{ background: "var(--panel)", border: "1px solid var(--hair)" }}
+      >
         <div className="flex items-center justify-center gap-3">
           <span
             className="grid h-10 w-10 place-items-center rounded-xl font-mono text-base font-semibold"

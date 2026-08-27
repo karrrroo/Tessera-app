@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Mosaic } from "@/components/record/mosaic";
 import { TermSwitcher } from "@/components/record/term-switcher";
-import { recordApi, type RecordResponse } from "@/lib/api/record";
+import { ScreenError } from "@/components/record/screen-error";
+import { recordApi } from "@/lib/api/record";
 import { useT } from "@/i18n/locale-provider";
+import { useAsyncData } from "@/lib/use-async-data";
 
 export default function OverviewPage() {
   const t = useT();
-  const [record, setRecord] = useState<RecordResponse | null>(null);
   const [termId, setTermId] = useState<string | undefined>(undefined);
+  const { data: record, error, retry } = useAsyncData(() => recordApi.getRecord(termId), [termId]);
 
-  useEffect(() => {
-    recordApi.getRecord(termId).then(setRecord);
-  }, [termId]);
-
+  if (error) return <ScreenError onRetry={retry} />;
   if (!record) return <main className="flex-1 p-8" />;
 
   return (

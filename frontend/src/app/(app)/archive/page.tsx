@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ArchiveYear } from "@/components/record/archive-year";
 import { EmptyState } from "@/components/record/empty-state";
-import { recordApi, type ArchiveYear as ArchiveYearData } from "@/lib/api/record";
+import { ScreenError } from "@/components/record/screen-error";
+import { recordApi } from "@/lib/api/record";
 import { useT } from "@/i18n/locale-provider";
+import { useAsyncData } from "@/lib/use-async-data";
 
 export default function ArchivePage() {
   const t = useT();
-  const [years, setYears] = useState<ArchiveYearData[] | null>(null);
+  const { data: years, error, retry } = useAsyncData(() => recordApi.getArchive().then((r) => r.years), []);
 
-  useEffect(() => {
-    recordApi.getArchive().then((r) => setYears(r.years));
-  }, []);
-
+  if (error) return <ScreenError onRetry={retry} />;
   if (years === null) return <main className="flex-1 p-8" />;
 
   return (

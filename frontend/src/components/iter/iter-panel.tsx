@@ -6,6 +6,7 @@ import { useT } from "@/i18n/locale-provider";
 import { Grain } from "@/components/design/grain";
 import { IterMark } from "./iter-mark";
 import { useIter } from "./iter-provider";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 // brief-chain/06-corrections-4 §2: two radial blooms, not a rectangle, on
 // the panel's own glass — every stop reaches fully transparent well inside
@@ -109,6 +110,8 @@ export function IterPanel() {
   const t = useT();
   const [draft, setDraft] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, open);
 
   useEffect(() => {
     if (!listRef.current) return;
@@ -136,9 +139,10 @@ export function IterPanel() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center tablet:items-stretch tablet:justify-end" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center tablet:items-stretch tablet:justify-end" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/45 tablet:hidden" onClick={closePanel} aria-hidden />
       <div
+        ref={panelRef}
         className="relative flex h-[92%] w-full flex-col rounded-t-[34px] border-t tablet:h-full tablet:w-[420px] tablet:rounded-none tablet:border-l tablet:border-t-0"
         style={{
           background: "var(--glass)",
@@ -241,7 +245,7 @@ export function IterPanel() {
               onKeyDown={onKeyDown}
               placeholder={t.iter.ph}
               rows={1}
-              className="w-full resize-none bg-transparent px-1.5 py-1 text-sm outline-none"
+              className="w-full resize-none bg-transparent px-1.5 py-1 text-sm"
               style={{ color: "var(--ink)" }}
             />
             <div className="flex items-center justify-end">
