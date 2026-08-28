@@ -2616,3 +2616,122 @@ made the file untrustworthy. A `503 ITER_UPSTREAM_BUSY` that survives three retr
 reported as SKIP with the reason printed, never as a pass; nothing else can skip. Those six
 assertions passed 16/16 earlier in this session with quota available — they are skipped, not
 unverified.
+
+**D-202. "The app is slow and hangs": measured five suspects, four were clean, and the one that
+was not is a connection pool throwing its connections away during ordinary human pauses.**
+
+The brief named five candidate causes and asked for numbers before any change. Measured on a
+production frontend build (`next build` + `next start`) against the real Neon database, because a
+dev server's numbers are dominated by Turbopack and by React Strict Mode double-invoking every
+effect — the latter shows up as EVERY API call being made exactly twice, which looks like a
+duplicate-request defect and is not: the same screens on the production build make each call once
+(admin dashboard, 8 duplicated calls becomes 0).
+
+The single most important number, and the one that reframed everything: **one round trip to the
+database costs 66ms** (`select 1`, median of ten, to a Neon host in eu-central-1), but **opening a
+connection costs 838ms** (TCP + TLS + auth). Every API endpoint therefore has a floor of roughly
+210ms — about three round trips — and anything that forces a reconnect costs the better part of a
+second.
+
+*(a) Scripting / rendering / painting.* Production, 1440x900. Login page load: scripting 229ms,
+rendering 111ms, painting 1040ms, longest task 180ms. App screens are far cheaper: painting 45ms
+(gradebook) to 296ms (roster), longest task 66-121ms. Nothing anywhere near a task long enough to
+read as a freeze. The login page's paint is real but one-off, and its composition was isolated by
+masking one contributor at a time over five runs each: the eight radial-gradient blobs are 62% of
+it (median paint 604ms as-is, 228ms with the blobs hidden), the grain overlay another 26% (444ms
+without it), and motion accounts for about 229ms (604ms at `prefers-reduced-motion: no-preference`
+against 375ms at `reduce`).
+
+*(b) backdrop-filter count. DISPROVEN, and it is the suspect the brief thought most likely.* At
+most **three** are ever visible at once, and most screens show one: the sidebar. The class
+inventory is only two rules deep — `.glass-panel` (blur 22px) and `.glass-admin` (blur 20px) — so
+C13's "containers only, at most three per admin screen" bound is being kept. Forcing
+`backdrop-filter: none` on everything made the login page paint **worse**, not better: median
+489ms against 375ms as-is, because removing the filters also removes the compositing layers that
+were isolating those regions from the rest of the page. Glass is not costing anything measurable
+here.
+
+*(c) Animated layout properties.* Exactly two hits, both real S13 violations and neither on a hot
+path: `desktop:transition-[margin-left]` on the app shell's main element
+(components/shell/app-shell.tsx) and `transition-[width]` on the sidebar
+(components/shell/sidebar-nav.tsx). Both fire only when the sidebar is collapsed or expanded, at
+most once per click, and both would need a transform-based rewrite of the rail geometry rather than
+a property swap. Reported, deliberately not fixed in this pass — the brief asked for one cause.
+
+*(d) Network. THIS IS IT.* Request counts are unremarkable (24-48 per screen, of which 4-9 are API
+calls; the rest are JS chunks, fonts and Next's own RSC prefetches). What is not unremarkable is
+the shape. Every navigation runs a strict serial chain before the screen's own data is even
+requested — `auth/refresh` (265-310ms) then `/api/me` (84-230ms), because the access token lives
+only in memory and a reload has to re-establish it — and `/admin` then runs three more dependent
+hops (academic-years, then classes and roster, then assignments), reaching data at 1864ms. And
+`/api/iter/messages?limit=50` is fetched on EVERY screen, including screens where the Iter panel is
+shut; on the admin dashboard it was the slowest request on the page at 670ms.
+
+*(e) A render loop. DISPROVEN, twice over.* Statically: all 65 `useEffect` calls in the frontend
+have a dependency array, and of the seven that set a value they also depend on, every one is
+guarded so it converges (a `if (!yearId) setYearId(...)` default-picker, an Escape-key listener, an
+exit-transition timer). The search debounce specifically is correct — `[query, kind]`, one timer,
+cleared on cleanup, no state set that it reads. Dynamically, and this is the stronger evidence:
+five seconds of doing literally nothing on `/login`, `/admin`, `/admin/roster` and `/overview`
+produced **0ms of paint, 0 frames, 0 requestAnimationFrame callbacks, 0 style recalculations and 0
+layouts** on all four.
+
+**The one cause, fixed.** `db/client.ts` had `idleTimeoutMillis: 30_000`, so the pool closed its
+connections after thirty seconds of quiet and the next request paid the 838ms handshake again.
+Measured against the same endpoint, warm against after a pause:
+
+    warm                     212ms
+    after 10s idle           232ms   (still inside the timeout)
+    after 35s idle           901ms
+    after 45s idle          1146ms
+    the request after that   209ms
+
+That is the reported symptom exactly: read a screen for a minute, click, wait a second, and then
+everything is fast again until the next pause. At page level, loading `/admin/roster` 45 seconds
+after the last activity took **2438ms and 2530ms** on two runs, with `auth/refresh` alone taking
+1108ms and 1032ms, against 1249ms for the same load after a 5-second pause.
+
+The fix is `idleTimeoutMillis: 0` — never reap an idle connection — plus TCP `keepAlive` so one is
+not silently dropped by a NAT in between. It comes with a `pool.on("error")` handler that is part
+of the fix and not incidental tidying: connections now live indefinitely, so the far end closing
+one is a normal event rather than a rare one, pg emits that on the pool, and an unhandled `error`
+event on an EventEmitter takes the process down — without the handler this would have traded a slow
+first request for a crashed backend.
+
+After, same measurements, same machine:
+
+    warm                     239ms (median of five)
+    after 35s idle           235ms
+    after 45s idle           221ms
+    after 60s idle           231ms
+    after 90s idle           238ms
+
+and at page level, `/admin/roster` after a pause: 1223 and 1149ms at 5s, 1232 and 1148ms at 45s,
+1301ms at 90s. **A pause now costs nothing**, and the warm path is unchanged (1249ms before,
+1149-1232ms after), so this is not a trade. `auth/refresh` went from 1032-1108ms after a pause to a
+flat 294-314ms. The pool settles at five connections against a `max` of 10, no idle-connection
+errors were logged across the whole verification run, and the backend was still healthy at the end
+of it.
+
+One honest caveat: the very first request after the backend process starts still pays the 838ms
+connection cost, and one run caught exactly that (`auth/refresh` 1024ms, data ready 3385ms,
+immediately after a restart). That is once per server start, not once per pause, and it is not what
+the brief describes.
+
+Not fixed, deliberately, because the brief asked for one cause: the serial refresh-then-`/api/me`
+chain could be one round trip (the login response already returns the token and the user together,
+so the server can clearly do it), Iter's history could be fetched when the panel opens rather than
+on every screen, and (c)'s two layout transitions still animate `width` and `margin-left`.
+
+**D-203. The overview's term switcher was never broken; the assertion looking for it was
+locale-dependent.** `smoke-interactions.cjs` located it by role and by an Armenian word. The
+switcher's buttons carry no `role="tab"` and their labels are localised, so the moment the test
+account's saved locale was Russian and they read "Первый семестр" the suite reported a missing
+control on a screen that was rendering both terms correctly — the same cry-wolf pattern as D-199,
+and it dropped the suite from 28/0 to 27/1 with no code change behind it. Confirmed by inspection
+before touching anything: `/api/me/record` returns two `availableTerms`, `TermSwitcher` renders
+null only below two, and the DOM held both buttons. Now located structurally as the heading row's
+buttons, which is exactly as strict and independent of translation; the assertion takes the real
+branch and passes on the switch re-rendering (331 to 335 chars). Also observed and NOT changed in
+this pass, because it is not a performance defect: those buttons signal which term is active
+through colour alone, with no `aria-pressed`, so a screen-reader user cannot tell them apart.
