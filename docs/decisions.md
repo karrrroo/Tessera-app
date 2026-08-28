@@ -2735,3 +2735,44 @@ buttons, which is exactly as strict and independent of translation; the assertio
 branch and passes on the switch re-rendering (331 to 335 chars). Also observed and NOT changed in
 this pass, because it is not a performance defect: those buttons signal which term is active
 through colour alone, with no `aria-pressed`, so a screen-reader user cannot tell them apart.
+
+**D-204. The admissions link on /login was reported missing; it was there and unreadable.** The
+report was "the apply section is not on the login page, please add it". It was in the
+server-rendered HTML the whole time and the whole flow worked — the link, the click-through to
+/apply on both breakpoints, the form, the API. What was wrong was that nobody could see it.
+
+B3 specified `--ink-3`, which is `rgba(244,242,238,.48)` on dark and `rgba(16,17,18,.5)` on light.
+The login card is barely-tinted glass over a saturated mesh, so composited over the surface the
+glyphs actually sit on, that measured **3.04:1 on dark desktop, 2.54:1 on dark mobile, 3.29:1 and
+3.49:1 on light** — against the 4.5:1 that 13px text requires. Worst on mobile, where the card's
+lower edge crosses the mesh's bright teal bloom and the link lands directly on it.
+
+tessera.css already forbade the value it was given: "secondary text inside these panels must use
+`--ink-2`, never `--ink-3`". So B3's number was against the design system's own rule, and the two
+had never been reconciled because nobody had measured this particular pair. `--ink-2` is not enough
+either, and that is measured rather than assumed — the support line one row above uses it and still
+reaches only **3.89:1** on dark mobile. Full-strength `--ink` is the first value that passes in all
+four conditions: **7.67 / 5.72 / 13.80 / 17.45:1**. It stays a 13px underlined link below the
+support line, so the B3 reasoning it was protecting — that admission must not compete with sign-in —
+still holds; only the colour changed. Deviating from a specified design value was put to the user
+rather than chosen unilaterally, and approved.
+
+Two measurement traps worth recording, because both produced a confident wrong answer first:
+
+(a) *The alpha.* The first version of the contrast harness parsed the computed colour with a regex
+that took the first three numbers and dropped the fourth, so it measured OPAQUE white against the
+card and reported a comfortable 7.22:1 for text that is half transparent. An honest measurement of
+the wrong pair of values reads exactly like a pass. The fix was to composite the alpha over the
+screenshotted surface.
+
+(b) *An expected 401 counted as a defect.* The click-through check failed on "no console errors"
+because the boot-time silent refresh answers 401 for a visitor with no session — the correct answer
+("you are anonymous"), identical on /login, and by design, since the access token is memory-only and
+`AuthProvider` has to ask before it can gate. The assertion now ignores that one request by name and
+nothing else.
+
+Verified after the change: contrast as above; the link visible and clickable at 1440 and 390 leading
+to a /apply form with 9 fields, no horizontal overflow, no console errors, and browser Back
+returning to /login (8/8); the admissions API suite 23/0 with the table left at its original single
+row and no stored object leaked; auth flows 21/0; the full route sweep "No problems found";
+`tokens:check` and `i18n:check` pass; production build compiles clean.

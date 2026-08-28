@@ -149,16 +149,37 @@ export function LoginView({ showDemo, applicationsOpen }: { showDemo: boolean; a
         {t.auth.support}
       </p>
 
-      {/* B3: below the support line, --ink-3, 13px, a LINK and not a button,
-          because it must not compete with sign-in. The login screen states
-          that accounts are created by the institution, so a prominent
-          Register control would contradict the screen it sits on; admission
-          is also seasonal, which is why this is gated at all. Rendered only
-          when the backend says applications are open — when it does not, this
-          is absent from the server-rendered HTML rather than hidden. */}
+      {/* B3: below the support line, 13px, a LINK and not a button, because it
+          must not compete with sign-in. The login screen states that accounts
+          are created by the institution, so a prominent Register control would
+          contradict the screen it sits on; admission is also seasonal, which
+          is why this is gated at all. Rendered only when the backend says
+          applications are open — when it does not, this is absent from the
+          server-rendered HTML rather than hidden.
+
+          --ink, NOT the --ink-3 B3 asked for. Reported as "the apply section
+          is not on the login page", and it was not a missing feature: the link
+          was in the server-rendered HTML the whole time and simply could not
+          be read. --ink-3 is rgba(244,242,238,.48) on dark, and this card is
+          barely-tinted glass over a saturated mesh, so composited over the
+          surface the glyphs actually sit on it measured 3.04:1 on desktop dark
+          and 2.54:1 on mobile dark, against the 4.5:1 that 13px text needs —
+          worst of all on mobile, where the card's lower edge crosses the
+          mesh's bright teal bloom and the link lands right on it.
+
+          tessera.css already forbids this ("secondary text inside these panels
+          must use --ink-2, never --ink-3"), so B3's value was against the
+          design system's own rule. --ink-2 is not enough either, and that is
+          measured rather than assumed: the support line one row above uses it
+          and still only reaches 3.89:1 on mobile dark. Full-strength --ink is
+          the first value that passes in all four conditions, measured after the
+          change: 7.67:1 dark desktop, 5.72:1 dark mobile, 13.80:1 and 17.45:1
+          light desktop/mobile — while staying a 13px underlined
+          link below the support line, so it still does not compete with the
+          filled sign-in button. */}
       {applicationsOpen && (
         <p className="text-center">
-          <Link href="/apply" className="text-[13px] underline underline-offset-2" style={{ color: "var(--ink-3)" }}>
+          <Link href="/apply" className="text-[13px] underline underline-offset-2" style={{ color: "var(--ink)" }}>
             {t.apply.loginLink}
           </Link>
         </p>
