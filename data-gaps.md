@@ -19,3 +19,9 @@ no assessment has a non-null topic — tessera-seed.sql never sets this column a
 ```sql
 update assessment set topic = 'Sample topic' where id = (select id from assessment order by random() limit 1);
 ```
+
+## qr_credential coverage
+
+students=202, qr_credentials=201
+
+_No mechanical fix — this needs an author decision, not a script._
