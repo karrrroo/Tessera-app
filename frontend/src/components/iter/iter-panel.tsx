@@ -258,9 +258,9 @@ export function IterPanel() {
                   worded and coloured as a wait, not a failure. */}
               <span
                 className="max-w-[85%] rounded-[18px] px-3.5 py-2.5 text-sm"
-                style={{ background: "var(--surface2)", color: error === "busy" ? "var(--ink-2)" : "var(--danger)" }}
+                style={{ background: "var(--surface2)", color: error === "busy" || error === "quota" ? "var(--ink-2)" : "var(--danger)" }}
               >
-                {error === "busy" ? t.iter.busy : t.iter.error}
+                {error === "quota" ? t.iter.quota : error === "busy" ? t.iter.busy : t.iter.error}
               </span>
             </div>
           )}

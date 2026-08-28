@@ -2776,3 +2776,74 @@ to a /apply form with 9 fields, no horizontal overflow, no console errors, and b
 returning to /login (8/8); the admissions API suite 23/0 with the table left at its original single
 row and no stored object leaked; auth flows 21/0; the full route sweep "No problems found";
 `tokens:check` and `i18n:check` pass; production build compiles clean.
+
+**D-205. Iter was not broken; it was taking 53 to 95 seconds, and the model behind it is capped at
+20 requests A DAY.** Reported as "Iter has to work, fix it". The first thing measured was a real
+message through the real endpoint: it returned a correct, grounded answer — and took **53.3
+seconds**. Nothing was wrong with the code path; the model was not answering.
+
+*The model.* `gemini-3.6-flash` was timing out, not thinking. Same system instruction, same
+question, any call still unanswered at 30s abandoned:
+
+    gemini-3.6-flash        4 of 4 abandoned at >30s
+    gemini-3.5-flash        3178 / 3160 / 3551ms   0 abandoned
+    gemini-3-flash-preview  2409 / 2270 / 2481ms   0 abandoned
+    gemini-3.5-flash-lite    903 /  827 /  833ms   0 abandoned
+
+The decisive evidence that this was queue wait and not computation: two identical calls to
+`gemini-3.6-flash` returned in **4.7s and 95.6s** with the SAME token counts — 135 prompt, ~350
+thinking, 60 output. Identical work, twenty times the wall clock. `thinkingConfig.thinkingBudget: 0`
+is not accepted by that model (400 INVALID_ARGUMENT), so the thinking could not be turned down
+either. Re-benchmarked against the REAL 1018-character context this app builds rather than a toy
+one, `gemini-3.5-flash` held at a 3005ms median, 3738ms worst, over six samples.
+
+The lite model is three times faster again and was rejected on **behaviour**, measured not assumed:
+asked an English question it answered in Armenian, 0 of 6 times in English, and both lite models did
+this. `gemini-3.5-flash` answered 6 of 6 in English, answered Armenian in Armenian, refused to change
+a grade, correctly distinguished "taught by Nvard" from "your average", and did not invent a subject
+absent from the context — six of six on the behaviour suite against four of six. Three seconds is a
+fine chat latency; replying in the wrong language is a defect a child notices. The 2.5 models are not
+an option at all: 404, "no longer available to new users".
+
+*The missing deadline.* There was no timeout anywhere in the chain, so a queued upstream simply held
+a child's question open for 95 seconds behind a spinner — which is why this arrived as "it does not
+work" rather than "it is slow". The model call now carries
+`abortSignal: AbortSignal.timeout(20_000)`, verified to actually abort (a deliberate 1200ms deadline
+rejected at 1229ms with `AbortError`), and a deadline surfaces as ITER_UPSTREAM_BUSY rather than
+ITER_UPSTREAM_ERROR because "it did not get to you in time" is a capacity fact, not a fault.
+
+*The quota, which is the real ceiling and is not a code problem.* D-194 recorded the free tier as 20
+requests per **minute**. It is not. The upstream names it exactly:
+`quotaId "GenerateRequestsPerDayPerProjectPerModel-FreeTier"`, `quotaValue 20` — twenty requests **per
+day, per model**. It answers 429 with a retryDelay of about 40 seconds either way, which is why the
+per-minute reading survived three sessions unchallenged. So the app was telling a child "the
+assistant is busy, try again in a moment" and sending them back, forty seconds at a time, to a button
+that could not work again until the next day. A spent day now raises a distinct
+`ITER_DAILY_QUOTA_SPENT`, matched on the quota's own id rather than on the retry delay, and the panel
+renders a distinct message in `--ink-2` ("the assistant's questions for today are used up; it will be
+available again tomorrow") in all three languages. Verified live against a genuinely exhausted quota:
+`503 ITER_DAILY_QUOTA_SPENT` in 1.3s, and the message rendered in the browser in the account's own
+locale.
+
+*A latent bug found on the way.* `isUpstreamBusy` contained `/\b429\b/` in which the two `\b` had
+become **literal backspace bytes** (0x08) — visible only under `cat -A` — so that clause had never
+matched anything in its life. Busy detection still worked through the other three tests, which is why
+it went unnoticed. It is the same shell-heredoc trap that D-179 recorded, now on its second offence;
+rewritten as an explicit character class that no quoting layer can eat.
+
+Verified after all of it: four messages through the real endpoint, 201 each, correct answers, correct
+language in both directions, the grade-change request refused, teacher context answered, history
+per-user and non-leaking, and the run's own rows removed and nothing else. Backend typecheck clean,
+`i18n:check` and `tokens:check` pass, production build clean, route sweep "No problems found",
+integrity audit clean, `iter_message` left at 0 rows.
+
+**Still not a code matter:** twenty questions a day, for a whole school, is a plan decision. At that
+ceiling Iter is a demonstration, not a feature, and no amount of engineering changes it — the app now
+at least says so honestly instead of implying a forty-second wait.
+
+**D-206. A hairline above the admissions link on /login.** Asked for directly. The link sat under the
+support address with nothing between them, reading as a stray trailing sentence, while the demo-
+credentials block immediately below it already had `border-t border-hair pt-4`. The same rule is now
+on the admissions row, so the card's lower half is one consistent stack of divided sections rather
+than one bordered row and one floating one. Contrast re-measured after the change and unaffected:
+7.67 / 5.74 / 13.80 / 17.56:1.

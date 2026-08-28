@@ -115,12 +115,14 @@ export function IterProvider({ children }: { children: ReactNode }) {
         setMessages(withReply);
         void saveMessages(userId, withReply);
       } catch (err) {
-        // A model that is merely BUSY (its per-minute quota is spent) is not the
-        // same fact as a model that failed, and it reads differently: one says
-        // "ask me again in a moment", the other "something went wrong". The
-        // backend distinguishes them (ITER_UPSTREAM_BUSY / ITER_UPSTREAM_ERROR)
-        // and this keeps the distinction instead of flattening both.
-        setError(err instanceof ApiRequestError && err.code === "ITER_UPSTREAM_BUSY" ? "busy" : "error");
+        // Three different facts, not two. A model that FAILED says "something
+        // went wrong"; one that is momentarily BUSY says "ask me again in a
+        // moment"; and one whose free-tier DAY is spent has to say that, because
+        // "in a moment" sends the user back to a button that cannot work again
+        // until the quota resets. The backend names all three
+        // (ITER_UPSTREAM_ERROR / ITER_UPSTREAM_BUSY / ITER_DAILY_QUOTA_SPENT).
+        const code = err instanceof ApiRequestError ? err.code : null;
+        setError(code === "ITER_DAILY_QUOTA_SPENT" ? "quota" : code === "ITER_UPSTREAM_BUSY" ? "busy" : "error");
       } finally {
         setSending(false);
       }

@@ -177,8 +177,13 @@ export function LoginView({ showDemo, applicationsOpen }: { showDemo: boolean; a
           light desktop/mobile — while staying a 13px underlined
           link below the support line, so it still does not compete with the
           filled sign-in button. */}
+      {/* A hairline above it, so admission reads as its own section of the card
+          rather than as a stray sentence trailing the support address. Same
+          `border-t border-hair pt-4` the demo block below already uses, so the
+          card's lower half is one consistent stack of divided rows instead of
+          one bordered row and one floating one. */}
       {applicationsOpen && (
-        <p className="text-center">
+        <p className="border-t border-hair pt-4 text-center">
           <Link href="/apply" className="text-[13px] underline underline-offset-2" style={{ color: "var(--ink)" }}>
             {t.apply.loginLink}
           </Link>
