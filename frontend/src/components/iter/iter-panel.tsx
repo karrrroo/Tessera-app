@@ -253,8 +253,14 @@ export function IterPanel() {
           <ThinkingPill visible={sending} />
           {error && (
             <div className="mt-3 flex justify-start">
-              <span className="max-w-[85%] rounded-[18px] px-3.5 py-2.5 text-sm" style={{ background: "var(--surface2)", color: "var(--danger)" }}>
-                {t.iter.error}
+              {/* "busy" is not an error in the sense the colour implies — the
+                  request was fine and the model will answer shortly — so it is
+                  worded and coloured as a wait, not a failure. */}
+              <span
+                className="max-w-[85%] rounded-[18px] px-3.5 py-2.5 text-sm"
+                style={{ background: "var(--surface2)", color: error === "busy" ? "var(--ink-2)" : "var(--danger)" }}
+              >
+                {error === "busy" ? t.iter.busy : t.iter.error}
               </span>
             </div>
           )}

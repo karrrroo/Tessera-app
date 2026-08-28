@@ -510,9 +510,18 @@ export async function previewImport(
   const errorCount = validations.filter((v) => v.status === "error").length;
   await repo.updateImportBatchStatus(batch.id, { status: "previewing", errorCount });
 
-  return shapeBatchResponse(batch.id, institutionId, kind, filename, rows.length, errorCount, rows, validations);
+  // A freshly created batch really is previewing — the line above just set it.
+  return shapeBatchResponse(batch.id, institutionId, kind, filename, rows.length, errorCount, rows, validations, "previewing");
 }
 
+// `status` is a PARAMETER, not a constant. It used to be hardcoded to
+// "previewing", which was true for the response to an upload and wrong for
+// every read afterwards: `GET /api/admin/import/:batchId` reported a
+// discarded or already-applied batch as still previewing. The review screen
+// therefore left its Apply button enabled on a batch that could not be
+// applied, and clicking it produced IMPORT_BATCH_NOT_PREVIEWING with nothing
+// on screen to explain why. Verified before the fix: discard set the database
+// to "discarded" and the API still answered "previewing".
 function shapeBatchResponse(
   batchId: string,
   _institutionId: string,
@@ -522,6 +531,7 @@ function shapeBatchResponse(
   errorCount: number,
   rows: xlsx.ParsedRow[],
   validations: RowValidation[],
+  status: "previewing" | "applied" | "discarded",
 ) {
   const warningCount = validations.filter((v) => v.status === "warning").length;
   return {
@@ -531,7 +541,7 @@ function shapeBatchResponse(
     rowCount,
     errorCount,
     warningCount,
-    status: "previewing" as const,
+    status,
     rows: rows.map((raw, i) => ({
       rowIndex: i + 1,
       status: validations[i].status,
@@ -570,7 +580,8 @@ export async function getImportBatch(batchId: string, institutionId: string, aca
   // never creates a batch with that kind; assignments are entered through
   // AssignmentGrid, not a spreadsheet upload), so this narrows safely.
   const kind = batch.kind as ImportKind;
-  return shapeBatchResponse(batch.id, institutionId, kind, batch.filename, batch.rowCount, errorCount, rawRows, validations);
+  return shapeBatchResponse(batch.id, institutionId, kind, batch.filename, batch.rowCount, errorCount, rawRows, validations,
+    batch.status as "previewing" | "applied" | "discarded");
 }
 
 // --- Import: patch one row ---

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from "@/state/auth-provider";
 import { usePathname } from "next/navigation";
 import { iterApi, iterHistoryApi } from "@/lib/api/iter";
+import { ApiRequestError } from "@/lib/api/client";
 import { loadMessages, saveMessages, type IterMessage } from "./iter-store";
 
 type IterContextValue = {
@@ -113,8 +114,13 @@ export function IterProvider({ children }: { children: ReactNode }) {
         const withReply = [...withUser, modelMsg];
         setMessages(withReply);
         void saveMessages(userId, withReply);
-      } catch {
-        setError("error");
+      } catch (err) {
+        // A model that is merely BUSY (its per-minute quota is spent) is not the
+        // same fact as a model that failed, and it reads differently: one says
+        // "ask me again in a moment", the other "something went wrong". The
+        // backend distinguishes them (ITER_UPSTREAM_BUSY / ITER_UPSTREAM_ERROR)
+        // and this keeps the distinction instead of flattening both.
+        setError(err instanceof ApiRequestError && err.code === "ITER_UPSTREAM_BUSY" ? "busy" : "error");
       } finally {
         setSending(false);
       }

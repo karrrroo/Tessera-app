@@ -178,6 +178,7 @@ const dict = {
     "thinking": "Iter is thinking…",
     "disclaimer": "Iter sees only your own data. It cannot change anything or message anyone for you.",
     "error": "Something went wrong. Please try again.",
+    "busy": "The assistant is busy right now. Try again in a moment.",
     "sChips": [
       "Which subject am I falling behind in",
       "Show this semester's trend",

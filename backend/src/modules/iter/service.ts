@@ -7,6 +7,39 @@ import * as repo from "./repo.js";
 
 const ITER_MESSAGE_EMPTY = () => new ApiError(422, "ITER_MESSAGE_EMPTY");
 const ITER_UPSTREAM_ERROR = () => new ApiError(502, "ITER_UPSTREAM_ERROR");
+// A quota or rate-limit refusal from the model is a DIFFERENT fact from the
+// model failing: it is transient and retrying shortly works, whereas a generic
+// upstream error may not. Reporting both as ITER_UPSTREAM_ERROR told a student
+// "something went wrong" when the honest answer was "ask me again in a moment".
+// Observed in testing: the free tier allows 20 requests per minute for
+// gemini-3.6-flash and answers 429 RESOURCE_EXHAUSTED with a retry delay.
+const ITER_UPSTREAM_BUSY = (retryAfterSeconds?: number) =>
+  new ApiError(503, "ITER_UPSTREAM_BUSY", retryAfterSeconds ? { details: { retryAfterSeconds } } : undefined);
+
+/**
+ * Whether this failure is the model refusing for capacity reasons.
+ *
+ * The SDK surfaces the upstream status inconsistently — sometimes as `status`,
+ * sometimes only inside the message text — so both are checked rather than
+ * relying on a shape that may change between versions.
+ */
+function isUpstreamBusy(err: unknown): { busy: boolean; retryAfterSeconds?: number } {
+  const text = err instanceof Error ? `${err.message}` : String(err ?? "");
+  const status = typeof err === "object" && err !== null && "status" in err ? (err as { status?: unknown }).status : undefined;
+  const busy =
+    status === 429 ||
+    status === "RESOURCE_EXHAUSTED" ||
+    /429/.test(text) ||
+    /RESOURCE_EXHAUSTED/i.test(text) ||
+    /exceeded your current quota/i.test(text) ||
+    /rate limit/i.test(text);
+  if (!busy) return { busy: false };
+  // "Please retry in 5.232496948s" — round up, and never suggest longer than a
+  // minute, which is the free tier's own window.
+  const m = /retry in ([0-9.]+)s/i.exec(text);
+  const parsed = m ? Math.ceil(Number(m[1])) : undefined;
+  return { busy: true, retryAfterSeconds: parsed && parsed > 0 ? Math.min(parsed, 60) : undefined };
+}
 
 type AuthClaims = { sub: string; role: "student" | "teacher" | "admin" };
 type Locale = "hy" | "en" | "ru";
@@ -128,6 +161,13 @@ export async function sendMessage(
     });
     reply = response.text?.trim() || "";
   } catch (err) {
+    const { busy, retryAfterSeconds } = isUpstreamBusy(err);
+    if (busy) {
+      // Logged at a lower volume than a real failure: hitting a per-minute
+      // quota is expected operationally, not a defect to investigate.
+      console.warn("[iter] model busy (quota/rate limit)" + (retryAfterSeconds ? `, retry in ${retryAfterSeconds}s` : ""));
+      throw ITER_UPSTREAM_BUSY(retryAfterSeconds);
+    }
     console.error("[iter] Gemini call failed:", err);
     throw ITER_UPSTREAM_ERROR();
   }

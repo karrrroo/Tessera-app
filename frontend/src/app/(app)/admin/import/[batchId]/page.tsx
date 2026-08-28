@@ -80,6 +80,8 @@ export default function ImportBatchPage() {
 
   if (!batch) return null;
 
+  const isPreviewing = batch.status === "previewing";
+
   if (applied) {
     const list = Object.entries(applied.created)
       .map(([k, v]) => `${v} ${CREATED_LABEL[k] ?? k}`)
@@ -113,13 +115,24 @@ export default function ImportBatchPage() {
             {interpolate(t.admin.importRowSummary, { rows: batch.rowCount, errors: batch.errorCount, warnings: batch.warningCount })}
           </p>
         </div>
+        {/* Both controls are disabled unless the batch is really still
+            previewing. The API used to report EVERY batch as "previewing"
+            regardless of its true state, so Apply stayed enabled on a batch
+            that had already been applied or discarded, and clicking it produced
+            IMPORT_BATCH_NOT_PREVIEWING with nothing on screen to explain why.
+            The backend now sends the real status; this respects it. */}
         <div className="flex gap-2">
-          <button onClick={discard} className="rounded border border-hair px-4 py-2 text-sm" style={{ color: "var(--ink-2)" }}>
+          <button
+            onClick={discard}
+            disabled={!isPreviewing || applying}
+            className="rounded border border-hair px-4 py-2 text-sm disabled:opacity-50"
+            style={{ color: "var(--ink-2)" }}
+          >
             {t.admin.importDiscard}
           </button>
           <button
             onClick={apply}
-            disabled={batch.errorCount > 0 || applying}
+            disabled={!isPreviewing || batch.errorCount > 0 || applying}
             className="rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
             style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
@@ -127,6 +140,14 @@ export default function ImportBatchPage() {
           </button>
         </div>
       </div>
+
+      {/* Say plainly why the controls are dead, rather than leaving an admin
+          to click one and read an error code. */}
+      {!isPreviewing && (
+        <p className="text-sm" style={{ color: "var(--warning)" }} role="status">
+          {t.admin.importBatchNotPreviewing}
+        </p>
+      )}
 
       {applyError && <p className="text-sm text-danger">{applyError}</p>}
 
