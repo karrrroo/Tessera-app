@@ -19,10 +19,45 @@ async function applicationsOpen(): Promise<boolean> {
   const base = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:4000";
   try {
     const res = await fetch(`${base}/api/applications/status`, { cache: "no-store" });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      console.warn(
+        `[login] the admissions link is hidden because ${base}/api/applications/status answered ${res.status}. ` +
+          "That is a REACHABLE backend refusing, not a closed intake — check APPLICATIONS_OPEN and the application table.",
+      );
+      return false;
+    }
     const body = (await res.json()) as { open?: unknown };
     return body.open === true;
-  } catch {
+  } catch (err) {
+    // Next.js probes this route during a build to decide whether it can be
+    // prerendered; the `no-store` fetch above makes that probe throw
+    // DynamicServerError, which is how the route gets marked dynamic (verified:
+    // /login is absent from .next/prerender-manifest.json, so it really is
+    // rendered per request and the link is re-evaluated on every load). That
+    // throw says nothing about the backend, so it must not be reported as if
+    // the backend were down — a misleading line in a deploy log is exactly what
+    // costs somebody an afternoon.
+    const message = err instanceof Error ? err.message : String(err);
+    if (/Dynamic server usage/i.test(message)) return false;
+
+    // Failing closed is still right — a link that leads to an endpoint which
+    // rejects every submission is worse than no link. What was wrong is that it
+    // failed closed SILENTLY, so "the backend is unreachable" looked exactly
+    // like "admissions are closed", with nothing anywhere to tell them apart.
+    //
+    // This is the deployment trap it hid: BACKEND_INTERNAL_URL is unset on a
+    // fresh Vercel project, so this fetch goes to localhost:4000 inside a
+    // serverless function, throws, and the admissions link vanishes with no
+    // explanation. It was reported as "the apply part is missing on Vercel",
+    // and every other /api/* call was equally broken by the same unset
+    // variable — this is just the only symptom visible without signing in.
+    console.warn(
+      `[login] the admissions link is hidden because ${base}/api/applications/status could not be reached ` +
+        `(${message}). ` +
+        (process.env.BACKEND_INTERNAL_URL
+          ? "BACKEND_INTERNAL_URL is set, so the backend itself is down or blocked."
+          : "BACKEND_INTERNAL_URL is NOT SET, so this defaulted to localhost — set it to the backend's public URL."),
+    );
     return false;
   }
 }

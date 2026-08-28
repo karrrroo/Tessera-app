@@ -2906,3 +2906,95 @@ because the access token is memory-only — and the browser logs every 401 as a 
 `/admin/applications` a listener attached before login caught the LOGIN page's 401 and attributed it
 to the admin screen; re-measured with the listener attached after login, that screen fires no failing
 requests at all.
+
+**D-209. Why nothing worked on Vercel, and the build-time variable that caused it.** Reported as
+"the project has to work on Vercel, but I didn't see the apply part". The apply part was the visible
+symptom; the whole API layer was down.
+
+`next.config.ts` rewrites `/api/*` to `process.env.BACKEND_INTERNAL_URL ?? "http://localhost:4000"`,
+and `login/page.tsx` asks the same base whether applications are open, treating an unreachable
+backend as a closed intake — deliberately, because a link to an endpoint that rejects everything is
+worse than no link. On a fresh Vercel project that variable is unset, so the fetch goes to
+localhost:4000 inside a serverless function, throws, and the admissions link is simply not rendered.
+Reproduced exactly by pointing a production build at a dead port: `href="/apply"` occurrences 0, page
+otherwise intact.
+
+**The variable is baked into the build, not read at runtime.** This is the part that makes the
+failure hard to diagnose, and it was proved rather than reasoned about — the same source built twice,
+then read out of `.next/routes-manifest.json`:
+
+    built with the variable unset             ->  http://localhost:4000/api/:path*
+    built with BACKEND_INTERNAL_URL=...:4999  ->  http://localhost:4999/api/:path*
+
+`rewrites()` is evaluated when the config loads and its result is compiled into the routes manifest,
+so setting the variable as runtime-only in the Vercel dashboard does nothing at all. Confirmed from
+the other direction too: a server started WITH the variable set but built without it still proxied to
+:4000.
+
+Three changes, none of which depend on which host is chosen:
+
+*The build now refuses to produce that artefact.* If `process.env.VERCEL` is set and
+`BACKEND_INTERNAL_URL` is not, the config throws with the explanation. Verified: `VERCEL=1` with the
+variable unset exits 1 and prints it; with the variable set it compiles and bakes the right
+destination. Elsewhere — self-hosting on one machine is legitimate — it is a loud warning during a
+production build rather than a failure.
+
+*The hidden link explains itself.* The `catch` was silent, so "the backend is unreachable" and
+"admissions are closed" were indistinguishable from outside. It now logs which URL it tried, the
+status or error, and whether `BACKEND_INTERNAL_URL` was set at all. Verified against a dead backend:
+`[login] the admissions link is hidden because http://localhost:9999/api/applications/status could
+not be reached (fetch failed). BACKEND_INTERNAL_URL is set, so the backend itself is down or
+blocked.`
+
+One trap inside that fix, caught by reading the build output instead of trusting the change: Next
+probes the route during a build to decide whether it can be prerendered, and the `no-store` fetch
+makes that probe throw `DynamicServerError` — which the new warning reported as a dead backend on
+every single build. That error is now recognised and passed over silently. Checked that the route is
+still dynamic rather than frozen with the link absent: `/login` does not appear in
+`.next/prerender-manifest.json`.
+
+*Both production start scripts were wrong.* `frontend.start` was `next dev` and `backend.start` was
+`tsx watch src/index.ts` — a dev build and a file watcher, as the production entry points. Now
+`next start`, and `node dist/index.js` behind a `prestart` that compiles. Verified by booting the
+compiled backend the way a host would: health 200 with `db.reachable: true`, login issues a token,
+`/api/admin/roster` 200, and `/api/auth/dev/demo-accounts` 404 because `NODE_ENV=production`.
+
+**D-210. What the proxy topology does and does not break.** Two things worth having measured rather
+than assumed, because both were reasonable to worry about.
+
+*The client's address survives.* The application rate limit is three per hour per IP, and
+`clientIp()` takes the RIGHTMOST `x-forwarded-for` entry on the grounds that only the entries the
+infrastructure itself appended can be believed. Behind a rewrite the worry is that the backend sees
+the proxy instead of the applicant, putting every family into one bucket. Measured with a throwaway
+backend that reports its own headers: the Next rewrite passes `x-forwarded-for` through
+**unchanged** (`203.0.113.7` in, `203.0.113.7` at the backend, `remote` merely the loopback), so
+`clientIp()` still buckets on the real applicant.
+
+*No CORS configuration is needed, and none exists.* The browser only ever addresses the Vercel
+domain; the rewrite is server-side. Worth writing down because the absence of any `cors()` call in
+the backend looks like an oversight and is not one.
+
+**D-211. Deployment artefacts, and the one thing I could not verify.** `backend/Dockerfile` (built
+from the repository ROOT, because the workspace lockfile lives there), `.dockerignore`, and
+`docs/deployment.md` with the environment checklist for both halves and a five-step post-deploy
+check.
+
+Docker is not installed on this machine, so **the image was never built** and no claim is made that
+it works. What was verified is the substance of what it does: `npm run build -w backend` emits
+`dist/`, the compiled server boots and serves under `NODE_ENV=production`, and the riskiest line —
+`npm prune --omit=dev` — is safe, because all 13 bare imports across the 72 compiled files
+(`@google/genai`, `argon2`, `drizzle-orm`, `express`, `multer`, `pg`, `zod` and the rest) are
+declared dependencies and none is dev-only. That scan needed a second pass: the first version matched
+the phrase `from "your average"` inside a comment tsc had preserved, and reported it as an undeclared
+dependency.
+
+The Dockerfile declares `VOLUME /app/backend/storage`, and the doc says twice that it must be a real
+persistent disk: `storage.ts` keeps application transcripts and credential attachments on the
+filesystem with only the key in the database, so deploying without a volume silently destroys every
+document a family has uploaded.
+
+**Iter, restated because it keeps coming up.** It is the app's only AI feature, it uses the Google
+Gemini API with the key already present in `backend/.env` as `GOOGLE_AI_API_KEY` — the same key
+handed over again, so nothing needed changing — and it works, measured at three to four seconds end
+to end. The ceiling is the plan: 20 requests per day per model on the free tier, which the app now
+reports honestly rather than as a passing busy signal. No code change lifts it.

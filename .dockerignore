@@ -1,0 +1,35 @@
+# Keeps the build context small and, more importantly, keeps secrets and local
+# state out of the image. `.env` is already gitignored, but a Docker build reads
+# the working directory, not git, so it has to be excluded again here.
+.env
+**/.env
+**/.env.local
+**/.env.*.local
+
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/tsconfig.tsbuildinfo
+
+# Uploaded documents. These belong on the host's persistent volume, never baked
+# into an image.
+backend/storage
+
+# Local Postgres data directory, if db:start has ever been used.
+.pgdata
+
+.git
+.github
+.perf
+.vscode
+docs
+
+# The frontend is not in this image (it goes to Vercel) — but its package.json
+# must be present or `npm ci` rejects the workspace lockfile as out of sync.
+# Excluding the directory without this negation makes the Docker build fail on
+# the COPY, which is a confusing way to find out.
+frontend
+!frontend/package.json
+
+*.log
