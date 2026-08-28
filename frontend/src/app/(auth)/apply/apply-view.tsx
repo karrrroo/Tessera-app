@@ -37,6 +37,19 @@ const ERROR_KEY: Record<string, keyof ReturnType<typeof useT>["apply"]> = {
   RATE_LIMITED: "errRateLimited",
 };
 
+// Mirrors applications/validation.ts. Computed at module load rather than per
+// render: the value only has to be right to the day, and a date input's bounds
+// changing under the user mid-session would be worse than a day of staleness.
+const BIRTH_DATE_MIN = isoYearsAgo(25);
+const BIRTH_DATE_MAX = isoYearsAgo(4);
+
+function isoYearsAgo(years: number): string {
+  const n = new Date();
+  return new Date(Date.UTC(n.getUTCFullYear() - years, n.getUTCMonth(), n.getUTCDate()))
+    .toISOString()
+    .slice(0, 10);
+}
+
 type Status = "editing" | "sending" | "sent";
 
 export function ApplyView({ open }: { open: boolean }) {
@@ -186,7 +199,24 @@ export function ApplyView({ open }: { open: boolean }) {
             </label>
             <label>
               {label(t.apply.birthDate)}
-              <input className={fieldClass} style={fieldStyle} type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
+              <input
+                className={fieldClass}
+                style={fieldStyle}
+                type="date"
+                /* The same window the server enforces (applications/validation.ts,
+                   MIN_AGE_YEARS / MAX_AGE_YEARS), so the picker will not offer a
+                   date the submission would then be rejected for. The server stays
+                   the authority — this only spares the family a round trip and a
+                   generic "check the required fields" message. Before this, the
+                   input had no bounds at all and the server's own check compared
+                   years rather than dates, which is how a birth date of 2026 got
+                   into the table. */
+                min={BIRTH_DATE_MIN}
+                max={BIRTH_DATE_MAX}
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                required
+              />
             </label>
             <label>
               {label(t.apply.email)}

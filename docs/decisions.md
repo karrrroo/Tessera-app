@@ -2847,3 +2847,62 @@ credentials block immediately below it already had `border-t border-hair pt-4`. 
 on the admissions row, so the card's lower half is one consistent stack of divided sections rather
 than one bordered row and one floating one. Contrast re-measured after the change and unaffected:
 7.67 / 5.74 / 13.80 / 17.56:1.
+
+**D-207. The public application form accepted an infant, a future birth date, and a phone number
+with no digits in it.** Found while debugging the admissions flow end to end. The one real row in
+`application` reads: date of birth **2026-08-08** and phone **"4ybebbu"**. Both got through
+validation that was written to stop exactly that.
+
+The rule was:
+
+    return year >= thisYear - 25 && year <= thisYear;
+
+and the comment two lines above it claims it rejects "a date in the future". It does not: comparing
+YEARS rather than dates, any date later this year passes, and — worse — an applicant aged **zero**
+is "plausible". A birth date is the field that follows a child into their permanent record, so a
+form that accepts a newborn as a secondary-school candidate is not a cosmetic problem.
+
+Now compared as dates against an age window, `MIN_AGE_YEARS = 4` to `MAX_AGE_YEARS = 25`. The floor
+is deliberately far below any real intake — Armenian schooling starts at six, so a genuine
+application is for a child of about five upward — because the cost of a floor that is too high is
+turning away a real family, and the cost of one slightly too low is only that an obvious typo
+survives. `born <= youngest` also rules out every future date, since `youngest` is years in the
+past, so the stated intent is now actually enforced.
+
+`phone` was `z.string().trim().max(40).optional()` — forty characters of anything. The whole purpose
+of the field is that the school can reach the family, so it now requires at least five digits
+somewhere in the string. Only a digit count, deliberately: `+374 10 123456`, `(010) 12-34-56` and
+`077-123456` all pass, "4ybebbu" does not, and no real international format is at risk.
+
+The form itself had no guard either — `<input type="date">` with no `min` or `max`, so the picker
+happily offered today. It now carries bounds derived from the same two constants, verified in the
+browser to actually refuse an out-of-range value (`checkValidity()` false for today's date, true for
+2012-05-04) rather than merely to carry the attributes. The server remains the authority; this only
+spares a family a round trip and a generic "check the required fields" message.
+
+Verified directly against the schema, 16 assertions, no HTTP and no rows created (the endpoint's
+own 3-per-hour rate limit had been spent by the admissions suite, and waiting an hour to test a pure
+function would have been theatre): a 14-year-old accepted, an infant refused, a date 30 days in the
+future refused, a 2-year-old refused, both boundaries accepted exactly, a 26-year-old refused,
+"2010-13-45" still refused rather than rolled over, a non-ISO date refused, the junk phone refused,
+four real phone formats accepted, and an absent phone still optional.
+
+**D-208. Two more of my own flaky assertions, both blaming the app for a race.** Recorded because
+this is now the fourth instance of the same pattern (D-199, D-203) and the lesson has not stuck.
+
+(a) *"student detail opens from a search hit"* reported `/admin 533 chars`, which reads as broken
+navigation. It was not. The check switches from the teachers tab back to the students tab and then
+slept a fixed 2200ms; on a busy dev server the tab state had not flushed, the search still ran
+against teachers, and the click landed on a TEACHER row — which by design does nothing, because
+teacher rows render with `cursor: auto` and no `onClick` and so do not pretend to be links.
+Confirmed by measuring both row types in the browser: student rows `cursor: pointer` and navigate to
+`/admin/students/<id>` with 824 chars, in both Armenian and transliterated Latin; teacher rows
+`cursor: auto`. The assertion now polls `aria-selected` on the tab and polls for the result list
+instead of sleeping. 28/0.
+
+(b) *"no console errors on /apply"* failed on a 401 that is the correct answer. The boot-time silent
+refresh returns 401 for a visitor with no session — `AuthProvider` has to ask before it can gate,
+because the access token is memory-only — and the browser logs every 401 as a console error. On
+`/admin/applications` a listener attached before login caught the LOGIN page's 401 and attributed it
+to the admin screen; re-measured with the listener attached after login, that screen fires no failing
+requests at all.
